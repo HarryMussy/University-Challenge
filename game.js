@@ -19,8 +19,9 @@ const EMAILJS_CONFIG = {
 const ALLOWED_DOMAINS = [
 	'microsoft.com',
 	'outlook.com',
-	// 'yourschool.ac.uk',
-	// 'staff.university.edu',
+	'hotmail.com',
+	'gmail.com',
+	'meadowhead.sheffield.sch.uk'
 ];
 
 // Team colours (used for team badges)
@@ -133,6 +134,7 @@ class UniversityChallenge {
 
     // Game — host
     $('revealAnswerBtn').onclick = () => this.revealAnswer();
+    $('revealQuestionBtn').onclick = () => this.revealQuestion();
     $('correctBtn').onclick      = () => this.markAnswer(true);
     $('incorrectBtn').onclick    = () => this.markAnswer(false);
     $('nextQuestionBtn').onclick = () => this.nextQuestion();
@@ -142,6 +144,9 @@ class UniversityChallenge {
 
     // Results
     $('playAgainBtn').onclick = () => this.resetGame();
+
+    // Download template
+    $('downloadTemplateBtn').onclick = () => this.downloadExcelTemplate();
   }
 
   // ════════════════════════════════════════════
@@ -549,15 +554,16 @@ class UniversityChallenge {
     };
     this.channel.addEventListener('message', tmpHandler);
 
-    // Timeout: if host doesn't reply (different machine, no WebSocket)
-    // fall back gracefully
+    // Timeout: if host doesn't reply, the room is invalid
     setTimeout(() => {
       if (!resolved) {
         resolved = true;
         this.channel.removeEventListener('message', tmpHandler);
-        // Default to solo wait screen since we can't confirm room
-        $('waitScreenName').textContent = this.myName;
-        this.showScreen('studentWaitScreen');
+        this.channel.close();
+        this.channel = null;
+        this.setStatus('joinStatus', 'That room code doesn\'t exist. Check and try again.', 'error');
+        $('roomCodeInput').value = '';
+        $('studentUsername').value = '';
       }
     }, 1200);
   }
@@ -703,31 +709,50 @@ class UniversityChallenge {
 
     const q = this.questions[this.currentQIdx];
     $('questionNumber').textContent  = `Q${this.currentQIdx + 1}`;
-    $('questionText').textContent    = q.text;
+    $('questionText').textContent    = '';  // Start blank
     $('questionCategory').textContent = q.category || '';
     $('questionCategory').style.display = q.category ? '' : 'none';
     $('answerReveal').classList.add('hidden');
     $('correctAnswerDisplay').textContent = '';
     $('buzzStatusBox').innerHTML = '<span class="buzz-waiting">Waiting for buzz…</span>';
     this.buzzedBy = null;
-
-    // Tell students the new question
-    this.broadcast({ type: 'NEXT_QUESTION', question: { text: q.text, category: q.category }, index: this.currentQIdx });
+    this.questionRevealed = false;
+    this.answerRevealed = false;
+  
+    // Show blank question initially - students don't see it yet
+    this.broadcast({ type: 'NEXT_QUESTION', question: { text: '', category: q.category }, index: this.currentQIdx });
   }
 
-  revealAnswer() {
+  revealQuestion() {
+    if (this.questionRevealed) return;
+  
     const q = this.questions[this.currentQIdx];
-    $('correctAnswerDisplay').textContent = q.answer;
-    $('answerReveal').classList.remove('hidden');
-  }
+    $('questionText').textContent = q.text;
+    this.questionRevealed = true;
+  
+    // Send full question to students
+    this.broadcast({ 
+      type: 'NEXT_QUESTION', 
+      question: { text: q.text, category: q.category }, 
+      index: this.currentQIdx 
+    });
+  
+    $('revealQuestionBtn').disabled = true;
+}
 
-  hostShowBuzz(name, teamId) {
-    const team = this.teams.find(t => t.id === teamId);
-    const label = team ? `${name} (${team.name})` : name;
-    $('buzzStatusBox').innerHTML = `<span class="buzz-alert">⚡ ${label} buzzed in!</span>`;
+revealAnswer() {
+  if (!this.questionRevealed) {
+    this.showAlert('Reveal the question first!');
+    return;
   }
+  
+  const q = this.questions[this.currentQIdx];
+  $('correctAnswerDisplay').textContent = q.answer;
+  $('answerReveal').classList.remove('hidden');
+  this.answerRevealed = true;
+}
 
-  markAnswer(correct) {
+markAnswer(correct) {
     if (!this.buzzedBy && this.gameMode !== 'solo') {
       // In solo mode we mark without buzz
     }
@@ -753,6 +778,8 @@ class UniversityChallenge {
 
   nextQuestion() {
     this.currentQIdx++;
+    this.questionRevealed = false;
+    this.answerRevealed = false;
     this.displayHostQuestion();
     this.broadcast({ type: 'BUZZ_RESET' });
   }
@@ -793,6 +820,13 @@ class UniversityChallenge {
 
   buzzIn() {
     if (!this.gameActive) return;
+    
+    // Prevent buzzing if in teams mode but no team selected
+    if (this.gameMode === 'teams' && !this.myTeamId) {
+      this.showAlert('You must select a team before you can buzz in!');
+      return;
+    }
+    
     $('buzzButton').disabled = true;
     this.broadcast({ type: 'BUZZ', name: this.myName, teamId: this.myTeamId });
   }
