@@ -192,7 +192,7 @@
     </div>
     <div class="field-group">
       <label class="field-label">Room Code</label>
-      <input type="text" id="roomCodeInput" class="field-input field-code" placeholder="ABC123" maxlength="6">
+      <input type="text" id="roomCodeInput" class="field-input field-code" placeholder="ABCDEF" maxlength="6" oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g, '')">
     </div>
     <div class="field-group">
       <label class="field-label">Your Name</label>

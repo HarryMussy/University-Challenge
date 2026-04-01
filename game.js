@@ -179,7 +179,6 @@ class UniversityChallenge {
     // Student join
     $('joinRoomBtn').onclick    = () => this.studentJoin();
     $('backToMainBtn3').onclick = () => this.showScreen('loginScreen');
-    $('roomCodeInput').oninput  = e => { e.target.value = e.target.value.toUpperCase(); };
 
     // Game — host
     $('revealAnswerBtn').onclick = () => this.revealAnswer();
@@ -529,7 +528,12 @@ class UniversityChallenge {
   }
 
   makeRoomCode() {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += letters[Math.floor(Math.random() * letters.length)];
+    }
+    return code;
   }
 
   copyRoomCode() {
@@ -646,7 +650,8 @@ class UniversityChallenge {
     const name = $('studentUsername').value.trim();
     console.log('[UC][STUDENT] studentJoin request', { code, name });
 
-    if (!code || !name) { this.setStatus('joinStatus', 'Enter both a room code and your name.', 'error'); return; }
+    if (!/^[A-Z]{6}$/.test(code)) { return; } // Invalid code, do nothing
+    if (!name) { return; } // No name, do nothing
 
     this.myName     = name;
     this.currentRoom = code;
@@ -689,9 +694,7 @@ class UniversityChallenge {
         this.channel.removeEventListener('message', tmpHandler);
         this.channel.close();
         this.channel = null;
-        this.setStatus('joinStatus', 'That room code doesn\'t exist. Check and try again.', 'error');
-        $('roomCodeInput').value = '';
-        $('studentUsername').value = '';
+        // Do nothing if room doesn't exist
       }
     }, 3000); // allow more time for cross-tab message delivery
   }
