@@ -518,6 +518,8 @@ class UniversityChallenge {
     if (this.channel) this.channel.close();
     this.channel = new BroadcastChannel(`${CHANNEL_NAME}_${this.currentRoom}`);
     this.channel.onmessage = e => this.handleChannelMessage(e.data);
+    this.channel.onmessageerror = e => console.error('[UC][HOST] channel message error', e);
+    this.channel.onclose = () => console.log('[UC][HOST] channel closed');
 
     $('roomCodeDisplay').textContent = this.currentRoom;
     $('lobbyInfo').classList.remove('hidden');
@@ -653,6 +655,8 @@ class UniversityChallenge {
     if (this.channel) this.channel.close();
     this.channel = new BroadcastChannel(`${CHANNEL_NAME}_${code}`);
     this.channel.onmessage = e => this.handleStudentMessage(e.data);
+    this.channel.onmessageerror = e => console.error('[UC][STUDENT] channel message error', e);
+    this.channel.onclose = () => console.log('[UC][STUDENT] channel closed');
 
     // Prepare to receive room information before contacting host (race-free)
     this.awaitRoomInfo();
