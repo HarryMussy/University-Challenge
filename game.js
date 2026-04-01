@@ -131,8 +131,8 @@ class UniversityChallenge {
   // ════════════════════════════════════════════
   initListeners() {
     // Landing
-    $('teacherLoginBtn').onclick  = () => this.showScreen('teacherLoginScreen');
-    $('studentJoinBtn').onclick   = () => this.showScreen('studentJoinScreen');
+    $('teacherLoginBtn').onclick  = () => { console.log('[UC] teacherLoginBtn clicked'); this.showScreen('teacherLoginScreen'); };
+    $('studentJoinBtn').onclick   = () => { console.log('[UC] studentJoinBtn clicked'); this.showScreen('studentJoinScreen'); };
 
     // Teacher login
     $('teacherEmailSubmit').onclick = () => this.sendOtp();
@@ -164,6 +164,7 @@ class UniversityChallenge {
     });
 
     // Dashboard
+    $('homeBtn').onclick         = () => this.goHome();
     $('logoutBtn').onclick       = () => this.logout();
     $('teamModeBtn').onclick     = () => this.setMode('teams');
     $('soloModeBtn').onclick     = () => this.setMode('solo');
@@ -334,10 +335,17 @@ class UniversityChallenge {
   makeOtp() { return Math.floor(100000 + Math.random() * 900000).toString(); }
 
   logout() {
+    console.log('[UC][HOST] logout');
     this.isHost = false;
     this.pendingEmail = null;
     this.clearSession(); // Clear stored session
     this.showEmailStep();
+    if (this.channel) { this.channel.close(); this.channel = null; }
+    this.showScreen('loginScreen');
+  }
+
+  goHome() {
+    console.log('[UC] goHome');
     if (this.channel) { this.channel.close(); this.channel = null; }
     this.showScreen('loginScreen');
   }
@@ -484,6 +492,12 @@ class UniversityChallenge {
   //         on the same origin / same machine)
   // ════════════════════════════════════════════
   createRoom() {
+    if (typeof BroadcastChannel === 'undefined') {
+      console.error('[UC][HOST] BroadcastChannel not supported');
+      this.setStatus('lobbyInfo', 'Your browser does not support BroadcastChannel; use a modern browser.', 'error');
+      return;
+    }
+
     this.buildTeams();
     this.currentRoom = this.makeRoomCode();
     this.players = {};
@@ -620,6 +634,12 @@ class UniversityChallenge {
   // STUDENT JOIN
   // ════════════════════════════════════════════
   studentJoin() {
+    if (typeof BroadcastChannel === 'undefined') {
+      console.error('[UC][STUDENT] BroadcastChannel not supported');
+      this.setStatus('joinStatus', 'BroadcastChannel not supported on this browser. Use Chrome/Edge/Firefox on HTTP.', 'error');
+      return;
+    }
+
     const code = $('roomCodeInput').value.trim().toUpperCase();
     const name = $('studentUsername').value.trim();
     console.log('[UC][STUDENT] studentJoin request', { code, name });
