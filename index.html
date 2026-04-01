@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>University Challenge</title>
+	<link rel="stylesheet" href="style.css">
+</head>
+<body>
+	<!-- Login Screen -->
+	<div id="loginScreen" class="screen active">
+		<div class="comic-container">
+			<h1 class="comic-title">UNIVERSITY CHALLENGE!</h1>
+			<p class="comic-subtitle">TEST YOUR BRAIN POWER</p>
+			<div class="login-form">
+				<button id="teacherLoginBtn" class="btn btn-primary btn-large">
+					🎓 TEACHER LOGIN
+				</button>
+				<button id="studentJoinBtn" class="btn btn-secondary btn-large">
+					👨‍🎓 STUDENT JOIN
+				</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Teacher Login Screen -->
+	<div id="teacherLoginScreen" class="screen">
+		<div class="comic-container">
+			<h1>TEACHER LOGIN</h1>
+			<div class="form-group">
+				<input type="email" id="teacherEmail" placeholder="Microsoft Email" class="input-field">
+				<button id="teacherLoginSubmit" class="btn btn-primary">LOGIN</button>
+				<button id="backToMainBtn" class="btn btn-outline">BACK</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Teacher Dashboard -->
+	<div id="teacherDashboard" class="screen">
+		<div class="comic-container">
+			<h1>TEACHER DASHBOARD</h1>
+			<div class="dashboard-grid">
+				<button id="createRoomBtn" class="btn btn-primary btn-large">
+					➕ CREATE ROOM
+				</button>
+				<button id="loadQuestionsBtn" class="btn btn-secondary btn-large">
+					📋 LOAD QUESTIONS
+				</button>
+			</div>
+			<div id="currentRoom" class="room-info hidden">
+				<h2>ROOM CODE: <span id="roomCode" class="code-display">-</span></h2>
+				<p>Students joined: <span id="studentCount">0</span></p>
+				<button id="startGameBtn" class="btn btn-primary" disabled>START GAME</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Student Join Screen -->
+	<div id="studentJoinScreen" class="screen">
+		<div class="comic-container">
+			<h1>JOIN THE CHALLENGE!</h1>
+			<div class="form-group">
+				<input type="text" id="roomCodeInput" placeholder="Room Code" class="input-field" maxlength="6">
+				<input type="text" id="studentUsername" placeholder="Your Username" class="input-field">
+				<button id="joinRoomBtn" class="btn btn-primary">JOIN</button>
+				<button id="backToMainBtn2" class="btn btn-outline">BACK</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Team Selection Screen -->
+	<div id="teamSelectionScreen" class="screen">
+		<div class="comic-container">
+			<h1>PICK YOUR TEAM!</h1>
+			<div id="teamsList" class="teams-grid">
+				<!-- Teams will be dynamically added -->
+			</div>
+			<button id="startGameStudentBtn" class="btn btn-primary" disabled>WAITING FOR HOST...</button>
+		</div>
+	</div>
+
+	<!-- Game Screen -->
+	<div id="gameScreen" class="screen">
+		<!-- Host View -->
+		<div id="hostView" class="view hidden">
+			<div class="host-layout">
+				<div class="question-display">
+					<h2 id="questionNumber">Question 1</h2>
+					<p id="questionText" class="big-text">Question here...</p>
+				</div>
+				<div class="scoreboard">
+					<h3>SCOREBOARD</h3>
+					<div id="scoresList" class="scores-container">
+						<!-- Scores will be dynamically added -->
+					</div>
+				</div>
+				<div class="buzzer-status">
+					<h3>BUZZER STATUS</h3>
+					<div id="buzzerInfo" class="info-box">Waiting for buzz...</div>
+				</div>
+				<div class="host-controls">
+					<button id="correctBtn" class="btn btn-success">✓ CORRECT</button>
+					<button id="incorrectBtn" class="btn btn-danger">✗ INCORRECT</button>
+					<button id="nextQuestionBtn" class="btn btn-primary">NEXT QUESTION</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Student View -->
+		<div id="studentView" class="view">
+			<div class="student-layout">
+				<div class="student-scoreboard">
+					<p>Your Team: <strong id="studentTeamName">-</strong></p>
+					<p>Team Score: <strong id="teamScoreDisplay">0</strong></p>
+				</div>
+				<div class="question-display student-question">
+					<h2 id="studentQuestionNumber">Question 1</h2>
+					<p id="studentQuestionText" class="big-text">Waiting for question...</p>
+				</div>
+				<button id="buzzButton" class="buzz-button" disabled>
+					<span class="buzz-text">BUZZ IN!</span>
+				</button>
+				<div id="buzzedIndicator" class="buzzed-message hidden">
+					YOU BUZZED IN!
+				</div>
+				<div id="resultMessage" class="result-message hidden"></div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Results Screen -->
+	<div id="resultsScreen" class="screen">
+		<div class="comic-container">
+			<h1>FINAL SCORES!</h1>
+			<div id="resultsList" class="results-grid">
+				<!-- Results will be dynamically added -->
+			</div>
+			<button id="playAgainBtn" class="btn btn-primary btn-large">PLAY AGAIN</button>
+		</div>
+	</div>
+
+	<script src="game.js"></script>
+</body>
+</html>
