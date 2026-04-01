@@ -515,6 +515,12 @@ class UniversityChallenge {
     switch (msg.type) {
       case 'JOIN':
         this.playerJoined(msg.name, msg.teamId || null);
+        // Immediately inform this joining student about room config (race-safe)
+        this.broadcast({
+          type: 'ROOM_INFO',
+          teams: this.teams,
+          gameMode: this.gameMode,
+        });
         break;
       case 'REQUEST_INFO':
         // Student is asking for room configuration
@@ -637,7 +643,7 @@ class UniversityChallenge {
         $('roomCodeInput').value = '';
         $('studentUsername').value = '';
       }
-    }, 1200);
+    }, 3000); // allow more time for cross-tab message delivery
   }
 
   applyRoomInfo(info) {
