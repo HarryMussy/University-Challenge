@@ -44,6 +44,8 @@ class UniversityChallenge {
     this.otpAttempts   = 0;
     this.MAX_ATTEMPTS  = 3;
     this.OTP_VALID_MS  = 10 * 60 * 1000;
+    this.loggedInEmail = null; // Store logged in teacher email
+    this.sessionToken  = null; // Simple session token
 
     // Game config
     this.gameMode      = 'teams'; // 'teams' | 'solo'
@@ -57,6 +59,8 @@ class UniversityChallenge {
     this.buzzedBy      = null;    // name of who buzzed
     this.currentRoom   = null;
     this.isHost        = false;
+    this.questionRevealed = false;  // Track if question is fully revealed
+    this.answerRevealed = false;    // Track if answer is revealed
 
     // Comms
     this.channel       = null;
@@ -68,6 +72,43 @@ class UniversityChallenge {
     this.initEmailJS();
     this.buildTeamNameInputs();
     this.initListeners();
+    this.checkStoredSession(); // Check for existing login session
+  }
+
+  // ════════════════════════════════════════════
+  // SESSION MANAGEMENT
+  // ════════════════════════════════════════════
+  checkStoredSession() {
+    try {
+      const session = JSON.parse(localStorage.getItem('uc_teacher_session'));
+      if (session && session.email && session.token && session.expiry > Date.now()) {
+        this.loggedInEmail = session.email;
+        this.sessionToken = session.token;
+        this.isHost = true;
+        $('teacherDisplayEmail').textContent = session.email;
+        this.showScreen('teacherDashboard');
+      }
+    } catch (e) {
+      // Invalid session data, clear it
+      localStorage.removeItem('uc_teacher_session');
+    }
+  }
+
+  createSession(email) {
+    this.loggedInEmail = email;
+    this.sessionToken = Math.random().toString(36).substring(2, 15);
+    const session = {
+      email: email,
+      token: this.sessionToken,
+      expiry: Date.now() + (7 * 24 * 60 * 60 * 1000) // 7 days
+    };
+    localStorage.setItem('uc_teacher_session', JSON.stringify(session));
+  }
+
+  clearSession() {
+    this.loggedInEmail = null;
+    this.sessionToken = null;
+    localStorage.removeItem('uc_teacher_session');
   }
 
   // ════════════════════════════════════════════
@@ -122,6 +163,7 @@ class UniversityChallenge {
     $('soloModeBtn').onclick     = () => this.setMode('solo');
     $('teamCountMinus').onclick  = () => this.adjustTeamCount(-1);
     $('teamCountPlus').onclick   = () => this.adjustTeamCount(1);
+    $('downloadTemplateBtn').onclick = () => this.downloadExcelTemplate();
     $('uploadExcel').onchange    = e => this.handleExcelUpload(e);
     $('createRoomBtn').onclick   = () => this.createRoom();
     $('copyCodeBtn').onclick     = () => this.copyRoomCode();
@@ -248,6 +290,7 @@ class UniversityChallenge {
     if (entered === this.generatedOtp) {
       this.generatedOtp = null;
       this.isHost = true;
+      this.createSession(this.pendingEmail); // Create persistent session
       $('teacherDisplayEmail').textContent = this.pendingEmail;
       this.showScreen('teacherDashboard');
     } else {
@@ -287,6 +330,7 @@ class UniversityChallenge {
   logout() {
     this.isHost = false;
     this.pendingEmail = null;
+    this.clearSession(); // Clear stored session
     this.showEmailStep();
     if (this.channel) { this.channel.close(); this.channel = null; }
     this.showScreen('loginScreen');
@@ -389,6 +433,27 @@ class UniversityChallenge {
     };
     reader.readAsArrayBuffer(file);
     e.target.value = ''; // reset so same file can be re-uploaded
+  }
+
+  downloadExcelTemplate() {
+    try {
+      const data = [
+        ['Question', 'Answer', 'Category', 'Points'],
+        ['What is the capital of France?', 'Paris', 'Geography', 2],
+        ['In what year did World War II end?', '1945', 'History', 2],
+        ['What is the chemical symbol for Gold?', 'Au', 'Chemistry', 2],
+      ];
+      
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      ws['!cols'] = [{ wch: 40 }, { wch: 25 }, { wch: 15 }, { wch: 10 }];
+      
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Questions');
+      XLSX.writeFile(wb, 'questions_template.xlsx');
+    } catch (err) {
+      console.error(err);
+      this.showAlert('Could not generate template. Make sure XLSX library is loaded.');
+    }
   }
 
   renderQuestionsPreview() {
@@ -904,7 +969,13 @@ markAnswer(correct) {
     $('questionsPreview').classList.add('hidden');
     $('hostView').classList.add('hidden');
     $('studentView').classList.add('hidden');
-    this.showScreen('loginScreen');
+    
+    // Return to lobby if teacher, otherwise to login
+    if (this.isHost) {
+      this.showScreen('teacherDashboard');
+    } else {
+      this.showScreen('loginScreen');
+    }
   }
 
   // ════════════════════════════════════════════
