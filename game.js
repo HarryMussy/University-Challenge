@@ -806,13 +806,18 @@ class UniversityChallenge {
     this.broadcast({ 
       type: 'NEXT_QUESTION', 
       question: { text: q.text }, 
+      index: this.currentQIdx 
+    });
   }
+
+  revealAnswer() {
+    if (this.answerRevealed) return;
   
-  const q = this.questions[this.currentQIdx];
-  $('correctAnswerDisplay').textContent = q.answer;
-  $('answerReveal').classList.remove('hidden');
-  this.answerRevealed = true;
-}
+    const q = this.questions[this.currentQIdx];
+    $('correctAnswerDisplay').textContent = q.answer;
+    $('answerReveal').classList.remove('hidden');
+    this.answerRevealed = true;
+  }
 
 markAnswer(correct) {
     if (!this.buzzedBy && this.gameMode !== 'solo') {
