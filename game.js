@@ -73,6 +73,12 @@ class UniversityChallenge {
     this.buildTeamNameInputs();
     this.initListeners();
     this.checkStoredSession(); // Check for existing login session
+
+    console.log('[UC] Initialized:', {
+      channelName: CHANNEL_NAME,
+      gameMode: this.gameMode,
+      teamCount: this.teamCount,
+    });
   }
 
   // ════════════════════════════════════════════
@@ -483,6 +489,12 @@ class UniversityChallenge {
     this.players = {};
     this.scores  = {};
 
+    console.log('[UC][HOST] createRoom started', {
+      currentRoom: this.currentRoom,
+      teams: this.teams,
+      gameMode: this.gameMode,
+    });
+
     // Initialise scores
     if (this.gameMode === 'teams') {
       this.teams.forEach(t => this.scores[t.id] = 0);
@@ -512,6 +524,7 @@ class UniversityChallenge {
   }
 
   handleChannelMessage(msg) {
+    console.log('[UC][HOST] handleChannelMessage', msg);
     switch (msg.type) {
       case 'JOIN':
         this.playerJoined(msg.name, msg.teamId || null);
@@ -545,7 +558,16 @@ class UniversityChallenge {
   }
 
   broadcast(msg) {
-    if (this.channel) this.channel.postMessage(msg);
+    console.log('[UC] broadcast', { room: this.currentRoom, msg });
+    if (this.channel) {
+      try {
+        this.channel.postMessage(msg);
+      } catch (err) {
+        console.error('[UC] broadcast failed', err, msg);
+      }
+    } else {
+      console.warn('[UC] broadcast dropped (no channel)', msg);
+    }
   }
 
   playerJoined(name, teamId) {
@@ -600,6 +622,8 @@ class UniversityChallenge {
   studentJoin() {
     const code = $('roomCodeInput').value.trim().toUpperCase();
     const name = $('studentUsername').value.trim();
+    console.log('[UC][STUDENT] studentJoin request', { code, name });
+
     if (!code || !name) { this.setStatus('joinStatus', 'Enter both a room code and your name.', 'error'); return; }
 
     this.myName     = name;
@@ -621,15 +645,17 @@ class UniversityChallenge {
     let resolved = false;
 
     const tmpHandler = e => {
+      console.log('[UC][STUDENT] awaitRoomInfo msg', e.data);
       if (e.data.type === 'ROOM_INFO' && !resolved) {
         resolved = true;
         this.channel.removeEventListener('message', tmpHandler);
+        console.log('[UC][STUDENT] ROOM_INFO received', e.data);
         this.applyRoomInfo(e.data);
       }
     };
 
     this.channel.addEventListener('message', tmpHandler);
-    // Ask host for room config after listener is active
+    console.log('[UC][STUDENT] REQUEST_INFO broadcast', { room: this.currentRoom, name: this.myName });
     this.broadcast({ type: 'REQUEST_INFO', name: this.myName });
 
     // Timeout: if host doesn't reply, the room is invalid
@@ -647,6 +673,7 @@ class UniversityChallenge {
   }
 
   applyRoomInfo(info) {
+    console.log('[UC][STUDENT] applyRoomInfo', info);
     // Restore team list from host data
     this.teams    = info.teams || [];
     this.gameMode = info.gameMode || 'solo';
