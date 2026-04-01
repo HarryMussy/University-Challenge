@@ -2,7 +2,7 @@
    UNIVERSITY CHALLENGE — game.js
    Features:
    - EmailJS OTP authentication for teachers
-   - Real in-browser lobby with BroadcastChannel
+   - Real-time multiplayer lobby with Socket.io
    - Teams mode (2–8 named teams) + Solo/Individuals mode
    - Excel upload (read questions) + template download
    - Full game flow with buzzer, scoring, results
@@ -30,10 +30,10 @@ const TEAM_COLOURS = [
   '#A78BFA','#FB923C','#38BDF8','#F472B6',
 ];
 
-// ── BroadcastChannel (local multi-tab lobby) ──
-// Replaces a WebSocket for local/LAN use.
-// For a real deployment, swap this for WebSocket/Supabase/Firebase.
-const CHANNEL_NAME = 'uc_lobby';
+// ── Socket.io (real-time multiplayer lobby) ──
+// Uses WebSocket connections for cross-device multiplayer.
+// Requires a Node.js server with Socket.io.
+const CHANNEL_NAME = 'uc_lobby'; // Legacy, no longer used
 
 class UniversityChallenge {
   constructor() {
@@ -63,7 +63,7 @@ class UniversityChallenge {
     this.answerRevealed = false;    // Track if answer is revealed
 
     // Comms
-    this.channel       = null;
+    this.socket       = null;
     this.myName        = null;    // student's own name
     this.myTeamId      = null;
 
@@ -487,13 +487,12 @@ class UniversityChallenge {
   }
 
   // ════════════════════════════════════════════
-  // LOBBY (BroadcastChannel — works across tabs
-  //         on the same origin / same machine)
+  // LOBBY (Socket.io — real-time multiplayer
+  //         across devices and browsers)
   // ════════════════════════════════════════════
   createRoom() {
-    if (typeof BroadcastChannel === 'undefined') {
-      console.error('[UC][HOST] BroadcastChannel not supported');
-      this.setStatus('lobbyInfo', 'Your browser does not support BroadcastChannel; use a modern browser.', 'error');
+    if (typeof io === 'undefined') {
+      alert('Socket.io not loaded. Please refresh the page.');
       return;
     }
 
@@ -513,13 +512,15 @@ class UniversityChallenge {
       this.teams.forEach(t => this.scores[t.id] = 0);
     }
 
-    // Open broadcast channel
-    if (this.channel) this.channel.close();
-    this.channel = new BroadcastChannel(`${CHANNEL_NAME}_${this.currentRoom}`);
-    console.log('[UC][HOST] Opened channel:', `${CHANNEL_NAME}_${this.currentRoom}`);
-    this.channel.onmessage = e => this.handleChannelMessage(e.data);
-    this.channel.onmessageerror = e => console.error('[UC][HOST] channel message error', e);
-    this.channel.onclose = () => console.log('[UC][HOST] channel closed');
+    // Connect to server
+    this.socket = io();
+    this.socket.emit('join-room', { room: this.currentRoom, name: 'host' });
+    this.socket.on('message', msg => this.handleChannelMessage(msg));
+    this.socket.on('player-joined', data => {
+      this.playerJoined(data.name, null);
+      // Send room info to all in room
+      this.broadcast({ type: 'ROOM_INFO', teams: this.teams, gameMode: this.gameMode });
+    });
 
     $('roomCodeDisplay').textContent = this.currentRoom;
     $('lobbyInfo').classList.remove('hidden');
@@ -545,17 +546,8 @@ class UniversityChallenge {
   }
 
   handleChannelMessage(msg) {
-    console.log('[UC][HOST] handleChannelMessage', msg);
+    console.log('[UC][HOST] handleChannelMessage received:', msg);
     switch (msg.type) {
-      case 'JOIN':
-        this.playerJoined(msg.name, msg.teamId || null);
-        // Immediately inform this joining student about room config (race-safe)
-        this.broadcast({
-          type: 'ROOM_INFO',
-          teams: this.teams,
-          gameMode: this.gameMode,
-        });
-        break;
       case 'REQUEST_INFO':
         // Student is asking for room configuration
         this.broadcast({
@@ -580,14 +572,10 @@ class UniversityChallenge {
 
   broadcast(msg) {
     console.log('[UC] broadcast', { room: this.currentRoom, msg });
-    if (this.channel) {
-      try {
-        this.channel.postMessage(msg);
-      } catch (err) {
-        console.error('[UC] broadcast failed', err, msg);
-      }
+    if (this.socket) {
+      this.socket.emit('message', { room: this.currentRoom, msg });
     } else {
-      console.warn('[UC] broadcast dropped (no channel)', msg);
+      console.warn('[UC] broadcast dropped (no socket)', msg);
     }
   }
 
@@ -641,9 +629,8 @@ class UniversityChallenge {
   // STUDENT JOIN
   // ════════════════════════════════════════════
   studentJoin() {
-    if (typeof BroadcastChannel === 'undefined') {
-      console.error('[UC][STUDENT] BroadcastChannel not supported');
-      this.setStatus('joinStatus', 'BroadcastChannel not supported on this browser. Use Chrome/Edge/Firefox on HTTP.', 'error');
+    if (typeof io === 'undefined') {
+      alert('Socket.io not loaded. Please refresh the page.');
       return;
     }
 
@@ -656,23 +643,18 @@ class UniversityChallenge {
     if (!name) { return; } // No name, do nothing
 
     $('joinRoomBtn').disabled = true; // Prevent multiple clicks
+    $('joinRoomBtn').textContent = 'Joining...';
 
     this.myName     = name;
     this.currentRoom = code;
 
-    // Open channel
-    if (this.channel) this.channel.close();
-    this.channel = new BroadcastChannel(`${CHANNEL_NAME}_${code}`);
-    console.log('[UC][STUDENT] Opened channel:', `${CHANNEL_NAME}_${code}`);
-    this.channel.onmessage = e => this.handleStudentMessage(e.data);
-    this.channel.onmessageerror = e => console.error('[UC][STUDENT] channel message error', e);
-    this.channel.onclose = () => console.log('[UC][STUDENT] channel closed');
+    // Connect to server
+    this.socket = io();
+    this.socket.emit('join-room', { room: this.currentRoom, name: this.myName });
+    this.socket.on('message', msg => this.handleStudentMessage(msg));
 
-    // Prepare to receive room information before contacting host (race-free)
-    this.awaitRoomInfo();
-
-    // Announce join — host will hear this
-    this.broadcast({ type: 'JOIN', name });
+    // Announce join — host will hear this via player-joined, then send ROOM_INFO
+    // No need for REQUEST_INFO, host sends ROOM_INFO on join
   }
 
   awaitRoomInfo() {
