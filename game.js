@@ -516,6 +516,7 @@ class UniversityChallenge {
     // Open broadcast channel
     if (this.channel) this.channel.close();
     this.channel = new BroadcastChannel(`${CHANNEL_NAME}_${this.currentRoom}`);
+    console.log('[UC][HOST] Opened channel:', `${CHANNEL_NAME}_${this.currentRoom}`);
     this.channel.onmessage = e => this.handleChannelMessage(e.data);
     this.channel.onmessageerror = e => console.error('[UC][HOST] channel message error', e);
     this.channel.onclose = () => console.log('[UC][HOST] channel closed');
@@ -648,10 +649,13 @@ class UniversityChallenge {
 
     const code = $('roomCodeInput').value.trim().toUpperCase();
     const name = $('studentUsername').value.trim();
+    console.log('[UC][STUDENT] Raw input:', $('roomCodeInput').value, 'processed code:', code, 'name:', name);
     console.log('[UC][STUDENT] studentJoin request', { code, name });
 
     if (!/^[A-Z]{6}$/.test(code)) { return; } // Invalid code, do nothing
     if (!name) { return; } // No name, do nothing
+
+    $('joinRoomBtn').disabled = true; // Prevent multiple clicks
 
     this.myName     = name;
     this.currentRoom = code;
@@ -659,6 +663,7 @@ class UniversityChallenge {
     // Open channel
     if (this.channel) this.channel.close();
     this.channel = new BroadcastChannel(`${CHANNEL_NAME}_${code}`);
+    console.log('[UC][STUDENT] Opened channel:', `${CHANNEL_NAME}_${code}`);
     this.channel.onmessage = e => this.handleStudentMessage(e.data);
     this.channel.onmessageerror = e => console.error('[UC][STUDENT] channel message error', e);
     this.channel.onclose = () => console.log('[UC][STUDENT] channel closed');
@@ -689,11 +694,12 @@ class UniversityChallenge {
 
     // Timeout: if host doesn't reply, the room is invalid
     setTimeout(() => {
-      if (!resolved) {
+      if (!resolved && this.channel) {
         resolved = true;
         this.channel.removeEventListener('message', tmpHandler);
         this.channel.close();
         this.channel = null;
+        $('joinRoomBtn').disabled = false; // Re-enable button
         // Do nothing if room doesn't exist
       }
     }, 3000); // allow more time for cross-tab message delivery
