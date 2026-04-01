@@ -602,16 +602,6 @@ body {
   border-radius: 20px;
   border: 2px solid var(--ink);
 }
-.q-cat-badge {
-  font-size: 0.75rem;
-  font-weight: 800;
-  background: var(--red);
-  color: white;
-  padding: 0.2rem 0.6rem;
-  border-radius: 20px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
 
 .sb-title {
   font-family: var(--font-display);

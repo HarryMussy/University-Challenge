@@ -401,16 +401,15 @@ class UniversityChallenge {
         const ws  = wb.Sheets[wb.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-        // Skip header row (row 0), expect: Question | Answer | Category | Points
+        // Skip header row (row 0), expect: Question | Answer | Points
         const questions = [];
         for (let i = 1; i < rows.length; i++) {
-          const [q, a, cat, pts] = rows[i];
+          const [q, a, pts] = rows[i];
           if (q && a) {
             questions.push({
               id: i,
               text: String(q).trim(),
               answer: String(a).trim(),
-              category: String(cat || '').trim(),
               points: parseInt(pts) || 2,
             });
           }
@@ -438,14 +437,14 @@ class UniversityChallenge {
   downloadExcelTemplate() {
     try {
       const data = [
-        ['Question', 'Answer', 'Category', 'Points'],
-        ['What is the capital of France?', 'Paris', 'Geography', 2],
-        ['In what year did World War II end?', '1945', 'History', 2],
-        ['What is the chemical symbol for Gold?', 'Au', 'Chemistry', 2],
+        ['Question', 'Answer', 'Points'],
+        ['What is the capital of France?', 'Paris', 2],
+        ['In what year did World War II end?', '1945', 2],
+        ['What is the chemical symbol for Gold?', 'Au', 2],
       ];
       
       const ws = XLSX.utils.aoa_to_sheet(data);
-      ws['!cols'] = [{ wch: 40 }, { wch: 25 }, { wch: 15 }, { wch: 10 }];
+      ws['!cols'] = [{ wch: 40 }, { wch: 25 }, { wch: 10 }];
       
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Questions');
@@ -516,6 +515,14 @@ class UniversityChallenge {
     switch (msg.type) {
       case 'JOIN':
         this.playerJoined(msg.name, msg.teamId || null);
+        break;
+      case 'REQUEST_INFO':
+        // Student is asking for room configuration
+        this.broadcast({
+          type: 'ROOM_INFO',
+          teams: this.teams,
+          gameMode: this.gameMode,
+        });
         break;
       case 'TEAM_SELECT':
         this.playerChangedTeam(msg.name, msg.teamId);
@@ -775,8 +782,8 @@ class UniversityChallenge {
     const q = this.questions[this.currentQIdx];
     $('questionNumber').textContent  = `Q${this.currentQIdx + 1}`;
     $('questionText').textContent    = '';  // Start blank
-    $('questionCategory').textContent = q.category || '';
-    $('questionCategory').style.display = q.category ? '' : 'none';
+    $('questionCategory').textContent = '';
+    $('questionCategory').style.display = 'none';
     $('answerReveal').classList.add('hidden');
     $('correctAnswerDisplay').textContent = '';
     $('buzzStatusBox').innerHTML = '<span class="buzz-waiting">Waiting for buzz…</span>';
@@ -785,7 +792,7 @@ class UniversityChallenge {
     this.answerRevealed = false;
   
     // Show blank question initially - students don't see it yet
-    this.broadcast({ type: 'NEXT_QUESTION', question: { text: '', category: q.category }, index: this.currentQIdx });
+    this.broadcast({ type: 'NEXT_QUESTION', question: { text: '' }, index: this.currentQIdx });
   }
 
   revealQuestion() {
@@ -798,17 +805,7 @@ class UniversityChallenge {
     // Send full question to students
     this.broadcast({ 
       type: 'NEXT_QUESTION', 
-      question: { text: q.text, category: q.category }, 
-      index: this.currentQIdx 
-    });
-  
-    $('revealQuestionBtn').disabled = true;
-}
-
-revealAnswer() {
-  if (!this.questionRevealed) {
-    this.showAlert('Reveal the question first!');
-    return;
+      question: { text: q.text }, 
   }
   
   const q = this.questions[this.currentQIdx];
