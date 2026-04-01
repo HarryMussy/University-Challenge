@@ -610,17 +610,14 @@ class UniversityChallenge {
     this.channel = new BroadcastChannel(`${CHANNEL_NAME}_${code}`);
     this.channel.onmessage = e => this.handleStudentMessage(e.data);
 
+    // Prepare to receive room information before contacting host (race-free)
+    this.awaitRoomInfo();
+
     // Announce join — host will hear this
     this.broadcast({ type: 'JOIN', name });
-
-    // Determine next screen — we listen for a ROOM_INFO reply within 1s
-    // If no reply comes we still proceed (host may not be on same machine in local mode)
-    this.awaitRoomInfo();
   }
 
   awaitRoomInfo() {
-    // Ask host for room config
-    this.broadcast({ type: 'REQUEST_INFO', name: this.myName });
     let resolved = false;
 
     const tmpHandler = e => {
@@ -630,7 +627,10 @@ class UniversityChallenge {
         this.applyRoomInfo(e.data);
       }
     };
+
     this.channel.addEventListener('message', tmpHandler);
+    // Ask host for room config after listener is active
+    this.broadcast({ type: 'REQUEST_INFO', name: this.myName });
 
     // Timeout: if host doesn't reply, the room is invalid
     setTimeout(() => {
@@ -662,6 +662,10 @@ class UniversityChallenge {
 
   handleStudentMessage(msg) {
     switch (msg.type) {
+      case 'ROOM_INFO':
+        // Accept host room config details even outside awaitRoomInfo timer
+        this.applyRoomInfo(msg);
+        break;
       case 'REQUEST_INFO':
         // Host tab responds with room config
         if (this.isHost) {
