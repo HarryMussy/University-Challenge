@@ -36,6 +36,7 @@ function getRoom(code) {
     questions: [],
     currentQ: 0,
     gameActive: false,
+    buzzed: false,
   };
   return rooms[code];
 }
@@ -109,6 +110,7 @@ io.on('connection', (socket) => {
     if (!r) return;
     r.gameActive = true;
     r.currentQ = 0;
+    r.buzzed = false;
     io.to(room).emit('game-started', {
       gameMode: r.gameMode,
       teams: r.teams,
@@ -127,7 +129,8 @@ io.on('connection', (socket) => {
   // STUDENT buzzes
   socket.on('buzz', ({ room, name, teamId }) => {
     const r = rooms[room];
-    if (!r || !r.gameActive) return;
+    if (!r || !r.gameActive || r.buzzed) return;
+    r.buzzed = true;
     // Only first buzz counts; host tracks this but we broadcast to all
     io.to(room).emit('buzzed', { name, teamId, socketId: socket.id });
   });
@@ -152,6 +155,7 @@ io.on('connection', (socket) => {
     const r = rooms[room];
     if (!r) return;
     r.currentQ++;
+    r.buzzed = false;
     if (r.currentQ >= r.questions.length) {
       r.gameActive = false;
       io.to(room).emit('game-ended', { scores: r.scores });

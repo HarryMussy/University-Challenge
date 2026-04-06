@@ -10,6 +10,12 @@
 </head>
 <body style="background:#1a1a2e;">
 
+<!-- Audio elements -->
+<audio id="buzzSound" src="sounds/buzz.mp3" preload="auto"></audio>
+<audio id="correctSound" src="sounds/correct.mp3" preload="auto"></audio>
+<audio id="incorrectSound" src="sounds/incorrect.mp3" preload="auto"></audio>
+<audio id="tenseMusic" src="sounds/tense.mp3" loop preload="auto"></audio>
+
 <div class="host-view">
   <!-- Sidebar -->
   <div class="host-sidebar">
@@ -21,10 +27,6 @@
       <h3 class="sb-title">Scoreboard</h3>
       <div id="scoresList" class="scores-list"></div>
     </div>
-    <div id="answerReveal" class="host-answer-reveal hidden">
-      <span class="ar-label">Correct Answer</span>
-      <span id="correctAnswerDisplay" class="ar-answer"></span>
-    </div>
     <div id="buzzStatusBox" class="host-buzz-status">
       <span class="buzz-waiting">Waiting for buzz…</span>
     </div>
@@ -35,6 +37,10 @@
     <p id="questionText" class="host-question-text" style="color:rgba(255,255,255,0.3);font-style:italic;">
       Press "Reveal Question" to show the question
     </p>
+    <div id="answerReveal" class="host-answer-reveal hidden">
+      <span class="ar-label">Correct Answer</span>
+      <span id="correctAnswerDisplay" class="ar-answer"></span>
+    </div>
     <div class="host-controls">
       <button id="revealQuestionBtn" class="btn btn-gold">📝 Reveal Question</button>
       <button id="revealAnswerBtn"   class="btn btn-outline">👁 Reveal Answer</button>
@@ -62,13 +68,12 @@
 
   $('totalQuestions').textContent = `/ ${questions.length}`;
 
-  // Connect socket as host (re-join for game events)
+  // Connect socket as host (already joined from lobby)
   const socket = io();
 
   socket.on('connect', () => {
     console.log('[TEACHER GAME] socket connected:', socket.id);
-    // Re-create the room so the host can receive buzz events
-    socket.emit('host-create', { room, teams, gameMode, questions });
+    // Room already created, just listen
   });
 
   socket.on('buzzed', data => {
@@ -78,6 +83,12 @@
     const team = teams.find(t => t.id === data.teamId);
     const teamLabel = team ? ` (${team.name})` : '';
     $('buzzStatusBox').innerHTML = `<span class="buzz-alert">🔔 ${data.name}${teamLabel} buzzed in!</span>`;
+    $('buzzSound').play();
+  });
+
+  socket.on('score-update', data => {
+    scores = data.scores;
+    renderScores();
   });
 
   // ── Display question ──
@@ -102,20 +113,37 @@
   $('revealQuestionBtn').onclick = () => {
     if (questionRevealed) return;
     const q = questions[currentQ];
-    $('questionText').textContent = q.text;
-    $('questionText').style.color = 'white';
-    $('questionText').style.fontStyle = 'normal';
     questionRevealed = true;
     $('revealQuestionBtn').disabled = true;
     socket.emit('host-reveal-question', { room });
+    $('tenseMusic').play();
+    // Gradual reveal
+    const text = q.text;
+    let i = 0;
+    const interval = setInterval(() => {
+      $('questionText').textContent = text.slice(0, i + 1);
+      $('questionText').style.color = 'white';
+      $('questionText').style.fontStyle = 'normal';
+      i++;
+      if (i >= text.length) clearInterval(interval);
+    }, 50); // 50ms per character
+    speechSynthesis.speak(new SpeechSynthesisUtterance(text));
   };
 
   $('revealAnswerBtn').onclick = () => {
     if (answerRevealed) return;
     const q = questions[currentQ];
-    $('correctAnswerDisplay').textContent = q.answer;
     $('answerReveal').classList.remove('hidden');
     answerRevealed = true;
+    // Gradual reveal for answer
+    const text = q.answer;
+    let i = 0;
+    const interval = setInterval(() => {
+      $('correctAnswerDisplay').textContent = text.slice(0, i + 1);
+      i++;
+      if (i >= text.length) clearInterval(interval);
+    }, 50);
+    speechSynthesis.speak(new SpeechSynthesisUtterance(text));
   };
 
   $('correctBtn').onclick   = () => markAnswer(true);
@@ -133,12 +161,19 @@
     buzzedBy = null; buzzedTeamId = null;
     $('buzzStatusBox').innerHTML = '<span class="buzz-waiting">Waiting for buzz…</span>';
     renderScores();
+    if (correct) {
+      $('correctSound').play();
+    } else {
+      $('incorrectSound').play();
+    }
   }
 
   $('nextQuestionBtn').onclick = () => {
     currentQ++;
     socket.emit('host-next-question', { room });
     displayQuestion();
+    $('tenseMusic').pause();
+    $('tenseMusic').currentTime = 0;
   };
 
   function renderScores() {
@@ -165,6 +200,8 @@
     Session.saveGame({ teams, scores, gameMode });
     socket.emit('host-next-question', { room }); // triggers game-ended on server
     window.location.href = '/results';
+    $('tenseMusic').pause();
+    $('tenseMusic').currentTime = 0;
   }
 
   // Start
