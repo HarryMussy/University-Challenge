@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Join — University Challenge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page page-dark">
+  <div class="panel">
+    <div class="panel-header">
+      <svg class="panel-logo" viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="170,6 320,52 320,118 170,154 20,118 20,52" fill="#0d0d1a" stroke="#FFD93D" stroke-width="4"/>
+        <text x="170" y="90" text-anchor="middle" font-family="Bangers,Impact,sans-serif" font-size="68" fill="#FFD93D" letter-spacing="2">UC</text>
+        <rect x="80" y="100" width="180" height="26" rx="4" fill="#FF6B6B"/>
+        <text x="170" y="119" text-anchor="middle" font-family="Bangers,Impact,sans-serif" font-size="14" fill="white" letter-spacing="3">UNIVERSITY CHALLENGE</text>
+      </svg>
+      <h1>Join the Challenge</h1>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Room Code</label>
+      <input type="text" id="roomCodeInput" class="field-input field-code" placeholder="ABCDEF"
+             maxlength="6" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Your Name</label>
+      <input type="text" id="studentName" class="field-input" placeholder="Enter your name" maxlength="30">
+    </div>
+    <div id="joinStatus" class="status-msg hidden"></div>
+    <div class="btn-col">
+      <button id="joinBtn" class="btn btn-primary btn-full">Join Game</button>
+      <a href="/" class="btn btn-ghost btn-full">← Back to Home</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="shared.js"></script>
+<script>
+(function() {
+  const joinBtn = $('joinBtn');
+
+  // Allow Enter key on either field
+  $('roomCodeInput').onkeydown = e => { if (e.key === 'Enter') $('studentName').focus(); };
+  $('studentName').onkeydown   = e => { if (e.key === 'Enter') attemptJoin(); };
+  joinBtn.onclick = attemptJoin;
+
+  function attemptJoin() {
+    const code = $('roomCodeInput').value.trim().toUpperCase();
+    const name = $('studentName').value.trim();
+
+    if (!/^[A-Z]{6}$/.test(code)) {
+      setStatus('joinStatus', 'Enter a valid 6-letter room code.', 'error'); return;
+    }
+    if (!name) {
+      setStatus('joinStatus', 'Enter your name.', 'error'); return;
+    }
+
+    joinBtn.disabled = true;
+    joinBtn.textContent = 'Joining…';
+    clearStatus('joinStatus');
+
+    const socket = io();
+
+    socket.on('connect', () => {
+      console.log('[STUDENT] connected, socket:', socket.id);
+      socket.emit('student-join', { room: code, name });
+    });
+
+    socket.on('room-info', data => {
+      // Save student info for next pages
+      Session.saveStudent({ name, room: code, gameMode: data.gameMode, teams: data.teams });
+
+      if (data.gameMode === 'teams' && data.teams && data.teams.length > 0) {
+        window.location.href = '/student-lobby';
+      } else {
+        // Solo mode — go straight to waiting
+        window.location.href = '/student-lobby';
+      }
+    });
+
+    socket.on('join-error', data => {
+      joinBtn.disabled = false;
+      joinBtn.textContent = 'Join Game';
+      setStatus('joinStatus', data.message || 'Could not join room.', 'error');
+      socket.disconnect();
+    });
+
+    socket.on('connect_error', () => {
+      joinBtn.disabled = false;
+      joinBtn.textContent = 'Join Game';
+      setStatus('joinStatus', 'Connection failed. Please try again.', 'error');
+    });
+
+    // Timeout if no response
+    setTimeout(() => {
+      if (joinBtn.disabled) {
+        joinBtn.disabled = false;
+        joinBtn.textContent = 'Join Game';
+        setStatus('joinStatus', 'Room not found or server timed out.', 'error');
+        socket.disconnect();
+      }
+    }, 6000);
+  }
+})();
+</script>
+</body>
+</html>

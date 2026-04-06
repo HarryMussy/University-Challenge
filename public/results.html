@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Results — University Challenge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page page-dark" style="align-items:center;justify-content:center;">
+  <div class="results-wrap">
+    <div class="results-header">
+      <svg class="results-logo" viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="170,6 320,52 320,118 170,154 20,118 20,52" fill="#0d0d1a" stroke="#FFD93D" stroke-width="4"/>
+        <text x="170" y="90" text-anchor="middle" font-family="Bangers,Impact,sans-serif" font-size="68" fill="#FFD93D" letter-spacing="2">UC</text>
+      </svg>
+      <h1 class="results-title">Final Scores!</h1>
+    </div>
+    <div id="resultsList" class="results-podium"></div>
+    <div class="btn-row">
+      <a href="/" class="btn btn-outline">🏠 Home</a>
+      <a id="playAgainBtn" href="/teacher-lobby" class="btn btn-primary btn-lg">Play Again</a>
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+(function() {
+  // Try game session first, then room session
+  const game = Session.getGame() || Session.getRoom();
+  const teacher = Session.getTeacher();
+
+  // Set play again link
+  if (!teacher) {
+    $('playAgainBtn').href = '/';
+    $('playAgainBtn').textContent = '🏠 Back to Home';
+  }
+
+  if (!game) {
+    $('resultsList').innerHTML = '<p style="color:rgba(255,255,255,0.5);text-align:center;font-weight:600;">No results to show.</p>';
+    return;
+  }
+
+  const { teams, scores, gameMode } = game;
+  const medals = ['🥇','🥈','🥉'];
+
+  const entries = Object.entries(scores || {})
+    .map(([id, pts]) => {
+      const team = teams && teams.find(t => t.id === id);
+      return { name: team ? team.name : id, pts, colour: team?.colour };
+    })
+    .sort((a,b) => b.pts - a.pts);
+
+  const el = $('resultsList');
+  if (!entries.length) {
+    el.innerHTML = '<p style="color:rgba(255,255,255,0.5);text-align:center;font-weight:600;">No scores recorded.</p>';
+    return;
+  }
+
+  entries.forEach((e, i) => {
+    const card = document.createElement('div');
+    card.className = 'result-card' + (i === 0 ? ' winner' : '');
+    card.innerHTML = `
+      <span class="result-rank">${medals[i] || `#${i+1}`}</span>
+      <span class="result-name" style="border-left:4px solid ${e.colour||'#FFD93D'};padding-left:0.75rem;">${e.name}</span>
+      <span class="result-score">${e.pts} pts</span>
+    `;
+    el.appendChild(card);
+  });
+
+  // Clean up sessions
+  Session.clearGame();
+  Session.clearRoom();
+  Session.clearStudent();
+})();
+</script>
+</body>
+</html>

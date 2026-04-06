@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teacher Lobby — University Challenge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page-light" style="min-height:100vh;">
+<div class="dashboard-wrap">
+
+  <header class="dash-header">
+    <svg class="dash-logo" viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="170,6 320,52 320,118 170,154 20,118 20,52" fill="#0d0d1a" stroke="#FFD93D" stroke-width="4"/>
+      <text x="170" y="90" text-anchor="middle" font-family="Bangers,Impact,sans-serif" font-size="68" fill="#FFD93D" letter-spacing="2">UC</text>
+      <rect x="80" y="100" width="180" height="26" rx="4" fill="#FF6B6B"/>
+      <text x="170" y="119" text-anchor="middle" font-family="Bangers,Impact,sans-serif" font-size="14" fill="white" letter-spacing="3">UNIVERSITY CHALLENGE</text>
+    </svg>
+    <div class="dash-user">
+      <span class="dash-user-label">Signed in as</span>
+      <span id="teacherEmail" class="dash-user-email">—</span>
+      <a href="/" class="btn btn-ghost-white btn-sm">Home</a>
+      <button id="logoutBtn" class="btn btn-ghost-white btn-sm">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="dash-grid">
+    <!-- Card 1: Mode -->
+    <div class="dash-card">
+      <div class="card-step">01</div>
+      <h2 class="card-title">Game Mode</h2>
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="teamModeBtn">
+          <span class="mode-icon">👥</span>
+          <span class="mode-name">Teams</span>
+          <span class="mode-desc">2–8 teams battle it out</span>
+        </button>
+        <button class="mode-btn" id="soloModeBtn">
+          <span class="mode-icon">🧠</span>
+          <span class="mode-name">Individuals</span>
+          <span class="mode-desc">Every student for themselves</span>
+        </button>
+      </div>
+      <div id="teamConfig" class="team-config">
+        <label class="field-label" style="margin-top:1rem;">Number of teams</label>
+        <div class="team-count-row">
+          <button class="count-btn" id="teamCountMinus">−</button>
+          <span id="teamCountDisplay" class="count-display">2</span>
+          <button class="count-btn" id="teamCountPlus">+</button>
+        </div>
+        <div id="teamNameInputs" class="team-name-inputs"></div>
+      </div>
+    </div>
+
+    <!-- Card 2: Questions -->
+    <div class="dash-card">
+      <div class="card-step">02</div>
+      <h2 class="card-title">Questions</h2>
+      <div class="questions-actions">
+        <button id="downloadTemplateBtn" class="btn btn-outline">⬇ Download Template</button>
+        <label class="btn btn-outline" for="uploadExcel">
+          ⬆ Upload Questions
+          <input type="file" id="uploadExcel" accept=".xlsx,.xls" style="display:none">
+        </label>
+      </div>
+      <div id="questionsLoaded" class="questions-loaded hidden">
+        <span id="questionsCount" class="q-count">0</span>
+        <span class="q-label"> questions loaded</span>
+      </div>
+      <div id="questionsPreview" class="q-preview hidden"></div>
+    </div>
+
+    <!-- Card 3: Lobby -->
+    <div class="dash-card dash-card-full">
+      <div class="card-step">03</div>
+      <h2 class="card-title">Lobby</h2>
+      <button id="createRoomBtn" class="btn btn-primary">Create Room</button>
+      <div id="lobbyInfo" class="lobby-info hidden">
+        <div class="room-code-display">
+          <div>
+            <div class="rc-label">Room Code</div>
+            <div id="roomCodeDisplay" class="rc-code">——————</div>
+          </div>
+          <button id="copyCodeBtn" class="btn btn-ghost btn-sm">Copy</button>
+        </div>
+        <div id="playerList" class="player-list">
+          <p class="waiting-text">Waiting for players to join…</p>
+        </div>
+        <button id="startGameBtn" class="btn btn-primary btn-full" disabled>Upload questions first</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="shared.js"></script>
+<script>
+/* ── Teacher Lobby Page ─────────────────────── */
+(function() {
+  const teacher = Session.getTeacher();
+  if (!teacher) { window.location.href = '/teacher'; return; }
+  $('teacherEmail').textContent = teacher.email;
+
+  let gameMode   = 'teams';
+  let teamCount  = 2;
+  let teams      = [];
+  let questions  = [];
+  let players    = {};  // socketId -> { name, teamId }
+  let currentRoom = null;
+  let socket     = null;
+
+  // ── Logout ──
+  $('logoutBtn').onclick = () => { Session.clearTeacher(); window.location.href = '/'; };
+
+  // ── Mode ──
+  $('teamModeBtn').onclick = () => setMode('teams');
+  $('soloModeBtn').onclick = () => setMode('solo');
+  function setMode(m) {
+    gameMode = m;
+    $('teamModeBtn').classList.toggle('active', m === 'teams');
+    $('soloModeBtn').classList.toggle('active', m === 'solo');
+    $('teamConfig').style.display = m === 'teams' ? '' : 'none';
+  }
+
+  // ── Team count ──
+  $('teamCountMinus').onclick = () => { teamCount = Math.max(2, teamCount - 1); $('teamCountDisplay').textContent = teamCount; buildTeamInputs(); };
+  $('teamCountPlus').onclick  = () => { teamCount = Math.min(8, teamCount + 1); $('teamCountDisplay').textContent = teamCount; buildTeamInputs(); };
+
+  function buildTeamInputs() {
+    const defaults = ['Team Alpha','Team Beta','Team Gamma','Team Delta','Team Epsilon','Team Zeta','Team Eta','Team Theta'];
+    const c = $('teamNameInputs'); c.innerHTML = '';
+    for (let i = 0; i < teamCount; i++) {
+      const row = document.createElement('div'); row.className = 'team-name-row';
+      const dot = document.createElement('span'); dot.className = 'team-color-dot'; dot.style.background = TEAM_COLOURS[i];
+      const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'team-name-input';
+      inp.value = defaults[i] || `Team ${i+1}`; inp.dataset.i = i;
+      row.appendChild(dot); row.appendChild(inp); c.appendChild(row);
+    }
+  }
+  buildTeamInputs();
+
+  function buildTeams() {
+    teams = Array.from($$('.team-name-input')).map((inp, i) => ({
+      id: `team_${i}`, name: inp.value.trim() || `Team ${i+1}`, colour: TEAM_COLOURS[i]
+    }));
+  }
+
+  // ── Excel ──
+  $('downloadTemplateBtn').onclick = () => {
+    const data = [['Question','Answer','Points'],
+      ['What is the capital of France?','Paris',2],
+      ['In what year did World War II end?','1945',2],
+      ['What is the chemical symbol for Gold?','Au',2]];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [{wch:40},{wch:25},{wch:10}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Questions');
+    XLSX.writeFile(wb, 'questions_template.xlsx');
+  };
+
+  $('uploadExcel').onchange = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+      try {
+        const wb = XLSX.read(evt.target.result, {type:'array'});
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, defval:''});
+        const qs = [];
+        for (let i = 1; i < rows.length; i++) {
+          const [q,a,pts] = rows[i];
+          if (q && a) qs.push({ id:i, text:String(q).trim(), answer:String(a).trim(), points:parseInt(pts)||2 });
+        }
+        if (!qs.length) { alert('No questions found. Check your file has data below the header row.'); return; }
+        questions = qs;
+        $('questionsCount').textContent = qs.length;
+        $('questionsLoaded').classList.remove('hidden');
+        renderPreview();
+        updateStartBtn();
+      } catch(err) { console.error(err); alert('Could not read file. Make sure it\'s a valid .xlsx file.'); }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = '';
+  };
+
+  function renderPreview() {
+    const el = $('questionsPreview'); el.innerHTML = ''; el.classList.remove('hidden');
+    questions.slice(0,8).forEach(q => {
+      const row = document.createElement('div'); row.className = 'q-preview-row';
+      row.innerHTML = `<span class="q-preview-q">${q.text}</span><span class="q-preview-a">${q.answer}</span>`;
+      el.appendChild(row);
+    });
+    if (questions.length > 8) {
+      const more = document.createElement('div'); more.className = 'q-preview-row';
+      more.innerHTML = `<span class="q-preview-q" style="color:#6b6b7a;font-style:italic">…and ${questions.length-8} more</span>`;
+      el.appendChild(more);
+    }
+  }
+
+  // ── Create Room ──
+  $('createRoomBtn').onclick = createRoom;
+
+  function createRoom() {
+    if (typeof io === 'undefined') { alert('Socket.io not loaded. Please refresh.'); return; }
+    buildTeams();
+    currentRoom = makeRoomCode();
+    players = {};
+
+    socket = io();
+    socket.on('connect', () => {
+      console.log('[HOST] connected, socket id:', socket.id);
+      socket.emit('host-create', {
+        room: currentRoom,
+        teams,
+        gameMode,
+        questions
+      });
+    });
+
+    socket.on('host-room-created', () => {
+      $('roomCodeDisplay').textContent = currentRoom;
+      $('lobbyInfo').classList.remove('hidden');
+      $('createRoomBtn').disabled = true;
+      $('createRoomBtn').textContent = 'Room Active';
+      updateStartBtn();
+    });
+
+    socket.on('player-joined', data => {
+      players[data.id] = { name: data.name, teamId: data.teamId };
+      renderPlayers();
+      updateStartBtn();
+    });
+
+    socket.on('player-team-changed', data => {
+      if (players[data.id]) players[data.id].teamId = data.teamId;
+      renderPlayers();
+      updateStartBtn();
+    });
+
+    socket.on('player-left', data => {
+      delete players[data.id];
+      renderPlayers();
+      updateStartBtn();
+    });
+
+    socket.on('connect_error', err => {
+      console.error('[HOST] Socket connect error:', err);
+    });
+  }
+
+  $('copyCodeBtn').onclick = () => {
+    navigator.clipboard.writeText(currentRoom).then(() => {
+      $('copyCodeBtn').textContent = 'Copied!';
+      setTimeout(() => $('copyCodeBtn').textContent = 'Copy', 1500);
+    });
+  };
+
+  function renderPlayers() {
+    const el = $('playerList'); el.innerHTML = '';
+    const entries = Object.entries(players);
+    if (!entries.length) { el.innerHTML = '<p class="waiting-text">Waiting for players to join…</p>'; return; }
+    entries.forEach(([id, data]) => {
+      const chip = document.createElement('div'); chip.className = 'player-chip';
+      const team = teams.find(t => t.id === data.teamId);
+      chip.innerHTML = `<span>${data.name}</span>${team ? `<span class="player-team-tag" style="background:${team.colour}">${team.name}</span>` : ''}`;
+      el.appendChild(chip);
+    });
+  }
+
+  function updateStartBtn() {
+    const hasQ = questions.length > 0;
+    const hasP = Object.keys(players).length > 0;
+    $('startGameBtn').disabled = !(hasQ && hasP && currentRoom);
+    $('startGameBtn').textContent = !hasQ ? 'Upload questions first' : !hasP ? 'Waiting for players…' : 'Start Game';
+  }
+
+  // ── Start Game ──
+  $('startGameBtn').onclick = () => {
+    if (!questions.length || !currentRoom) return;
+
+    // Save game state for the game page
+    Session.saveRoom({
+      room: currentRoom,
+      teams,
+      gameMode,
+      questions,
+      scores: Object.fromEntries(teams.map(t => [t.id, 0]))
+    });
+
+    socket.emit('host-start-game', { room: currentRoom });
+    window.location.href = '/teacher-game';
+  };
+})();
+</script>
+</body>
+</html>

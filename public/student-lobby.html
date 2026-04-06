@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lobby — University Challenge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page page-dark" id="lobbyPage">
+
+  <!-- TEAM SELECTION (shown for teams mode) -->
+  <div id="teamSelectView" class="panel panel-wide hidden">
+    <div class="panel-header">
+      <h1>Pick Your Team</h1>
+      <p class="step-hint">Choose which team you're joining, <strong id="playerNameDisplay"></strong></p>
+    </div>
+    <div id="teamsList" class="teams-grid"></div>
+    <div id="waitingForHost" class="waiting-host hidden">
+      <div class="pulse-dot"></div>
+      <span>Waiting for the host to start the game…</span>
+    </div>
+  </div>
+
+  <!-- SOLO WAITING -->
+  <div id="soloWaitView" class="panel hidden">
+    <div class="panel-header"><h1>You're In!</h1></div>
+    <p class="step-hint">Joined as <strong id="soloNameDisplay"></strong></p>
+    <div class="waiting-anim">
+      <div class="pulse-dot large"></div>
+      <p>Waiting for the host to start…</p>
+    </div>
+  </div>
+
+  <!-- Loading (before session loads) -->
+  <div id="loadingView" class="panel">
+    <div class="waiting-anim">
+      <div class="pulse-dot large"></div>
+      <p>Connecting…</p>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="shared.js"></script>
+<script>
+(function() {
+  const student = Session.getStudent();
+  if (!student) { window.location.href = '/join'; return; }
+
+  const { name, room, gameMode, teams } = student;
+  let myTeamId = null;
+  let socket = null;
+
+  // Connect socket
+  socket = io();
+
+  socket.on('connect', () => {
+    console.log('[STUDENT LOBBY] connected, socket:', socket.id);
+    // Re-join the room (new socket connection)
+    socket.emit('student-join', { room, name });
+  });
+
+  socket.on('room-info', data => {
+    // Update session with latest team info
+    Session.saveStudent({ ...student, teams: data.teams, gameMode: data.gameMode });
+    showCorrectView(data.gameMode, data.teams);
+  });
+
+  socket.on('game-started', data => {
+    // Save full game state
+    Session.saveGame({
+      room,
+      name,
+      myTeamId,
+      gameMode: data.gameMode,
+      teams: data.teams,
+      scores: data.scores,
+    });
+    window.location.href = '/student-game';
+  });
+
+  socket.on('host-disconnected', () => {
+    alert('The host has disconnected. Returning to home.');
+    window.location.href = '/';
+  });
+
+  // Show correct view
+  function showCorrectView(mode, teamList) {
+    $('loadingView').classList.add('hidden');
+    if (mode === 'teams' && teamList && teamList.length > 0) {
+      $('playerNameDisplay').textContent = name;
+      renderTeams(teamList);
+      $('teamSelectView').classList.remove('hidden');
+    } else {
+      $('soloNameDisplay').textContent = name;
+      $('soloWaitView').classList.remove('hidden');
+    }
+  }
+
+  function renderTeams(teamList) {
+    const grid = $('teamsList'); grid.innerHTML = '';
+    teamList.forEach(team => {
+      const btn = document.createElement('button');
+      btn.className = 'team-select-btn';
+      btn.innerHTML = `
+        <span class="tsb-color" style="background:${team.colour}"></span>
+        <span class="tsb-name">${team.name}</span>
+      `;
+      btn.onclick = () => selectTeam(team, btn);
+      grid.appendChild(btn);
+    });
+  }
+
+  function selectTeam(team, btn) {
+    myTeamId = team.id;
+    $$('.team-select-btn').forEach(b => b.classList.remove('chosen'));
+    btn.classList.add('chosen');
+    socket.emit('team-select', { room, name, teamId: team.id });
+    // Update session
+    Session.saveStudent({ ...student, myTeamId: team.id });
+    setTimeout(() => $('waitingForHost').classList.remove('hidden'), 300);
+  }
+
+  // Initial view based on stored session data
+  showCorrectView(gameMode, teams);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game — University Challenge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body style="background:#1a1a2e;">
+
+<div class="host-view">
+  <!-- Sidebar -->
+  <div class="host-sidebar">
+    <div class="host-q-meta">
+      <span id="questionNumber" class="q-num-badge">Q1</span>
+      <span id="totalQuestions" style="color:rgba(255,255,255,0.4);font-size:0.85rem;font-weight:600;"></span>
+    </div>
+    <div>
+      <h3 class="sb-title">Scoreboard</h3>
+      <div id="scoresList" class="scores-list"></div>
+    </div>
+    <div id="answerReveal" class="host-answer-reveal hidden">
+      <span class="ar-label">Correct Answer</span>
+      <span id="correctAnswerDisplay" class="ar-answer"></span>
+    </div>
+    <div id="buzzStatusBox" class="host-buzz-status">
+      <span class="buzz-waiting">Waiting for buzz…</span>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="host-main">
+    <p id="questionText" class="host-question-text" style="color:rgba(255,255,255,0.3);font-style:italic;">
+      Press "Reveal Question" to show the question
+    </p>
+    <div class="host-controls">
+      <button id="revealQuestionBtn" class="btn btn-gold">📝 Reveal Question</button>
+      <button id="revealAnswerBtn"   class="btn btn-outline">👁 Reveal Answer</button>
+      <button id="correctBtn"        class="btn btn-success">✓ Correct</button>
+      <button id="incorrectBtn"      class="btn btn-danger">✗ Incorrect</button>
+      <button id="nextQuestionBtn"   class="btn btn-primary">Next →</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="shared.js"></script>
+<script>
+(function() {
+  const roomData = Session.getRoom();
+  if (!roomData) { window.location.href = '/teacher-lobby'; return; }
+
+  const { room, teams, gameMode, questions } = roomData;
+  let scores = roomData.scores || {};
+  let currentQ = 0;
+  let questionRevealed = false;
+  let answerRevealed = false;
+  let buzzedBy = null;
+  let buzzedTeamId = null;
+
+  $('totalQuestions').textContent = `/ ${questions.length}`;
+
+  // Connect socket as host (re-join for game events)
+  const socket = io();
+
+  socket.on('connect', () => {
+    console.log('[TEACHER GAME] socket connected:', socket.id);
+    // Re-create the room so the host can receive buzz events
+    socket.emit('host-create', { room, teams, gameMode, questions });
+  });
+
+  socket.on('buzzed', data => {
+    if (buzzedBy) return; // ignore subsequent buzzes
+    buzzedBy = data.name;
+    buzzedTeamId = data.teamId;
+    const team = teams.find(t => t.id === data.teamId);
+    const teamLabel = team ? ` (${team.name})` : '';
+    $('buzzStatusBox').innerHTML = `<span class="buzz-alert">🔔 ${data.name}${teamLabel} buzzed in!</span>`;
+  });
+
+  // ── Display question ──
+  function displayQuestion() {
+    if (currentQ >= questions.length) { endGame(); return; }
+    const q = questions[currentQ];
+    $('questionNumber').textContent = `Q${currentQ + 1}`;
+    $('questionText').textContent = 'Press "Reveal Question" to show the question';
+    $('questionText').style.color = 'rgba(255,255,255,0.3)';
+    $('questionText').style.fontStyle = 'italic';
+    $('answerReveal').classList.add('hidden');
+    $('correctAnswerDisplay').textContent = '';
+    $('buzzStatusBox').innerHTML = '<span class="buzz-waiting">Waiting for buzz…</span>';
+    questionRevealed = false;
+    answerRevealed = false;
+    buzzedBy = null;
+    buzzedTeamId = null;
+    $('revealQuestionBtn').disabled = false;
+    renderScores();
+  }
+
+  $('revealQuestionBtn').onclick = () => {
+    if (questionRevealed) return;
+    const q = questions[currentQ];
+    $('questionText').textContent = q.text;
+    $('questionText').style.color = 'white';
+    $('questionText').style.fontStyle = 'normal';
+    questionRevealed = true;
+    $('revealQuestionBtn').disabled = true;
+    socket.emit('host-reveal-question', { room });
+  };
+
+  $('revealAnswerBtn').onclick = () => {
+    if (answerRevealed) return;
+    const q = questions[currentQ];
+    $('correctAnswerDisplay').textContent = q.answer;
+    $('answerReveal').classList.remove('hidden');
+    answerRevealed = true;
+  };
+
+  $('correctBtn').onclick   = () => markAnswer(true);
+  $('incorrectBtn').onclick = () => markAnswer(false);
+
+  function markAnswer(correct) {
+    const q = questions[currentQ];
+    const pts = correct ? q.points : -1;
+    if (gameMode === 'teams' && buzzedTeamId) {
+      scores[buzzedTeamId] = (scores[buzzedTeamId] || 0) + pts;
+    } else if (buzzedBy) {
+      scores[buzzedBy] = (scores[buzzedBy] || 0) + pts;
+    }
+    socket.emit('host-mark', { room, correct, buzzedName: buzzedBy, buzzedTeamId });
+    buzzedBy = null; buzzedTeamId = null;
+    $('buzzStatusBox').innerHTML = '<span class="buzz-waiting">Waiting for buzz…</span>';
+    renderScores();
+  }
+
+  $('nextQuestionBtn').onclick = () => {
+    currentQ++;
+    socket.emit('host-next-question', { room });
+    displayQuestion();
+  };
+
+  function renderScores() {
+    const el = $('scoresList'); el.innerHTML = '';
+    const entries = Object.entries(scores).sort((a,b) => b[1]-a[1]);
+    const top = entries[0]?.[1];
+    entries.forEach(([id, pts]) => {
+      const team = teams.find(t => t.id === id);
+      const name = team ? team.name : id;
+      const colour = team ? team.colour : '#FFD93D';
+      const row = document.createElement('div');
+      row.className = 'score-row' + (pts === top && pts > 0 ? ' leading' : '');
+      row.innerHTML = `
+        <span style="display:flex;align-items:center;gap:0.5rem;">
+          <span style="width:10px;height:10px;border-radius:50%;background:${colour};display:inline-block;border:1.5px solid #fff;"></span>
+          ${name}
+        </span>
+        <span class="score-pts">${pts}</span>`;
+      el.appendChild(row);
+    });
+  }
+
+  function endGame() {
+    Session.saveGame({ teams, scores, gameMode });
+    socket.emit('host-next-question', { room }); // triggers game-ended on server
+    window.location.href = '/results';
+  }
+
+  // Start
+  displayQuestion();
+})();
+</script>
+</body>
+</html>
