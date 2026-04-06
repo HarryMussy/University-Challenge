@@ -57,9 +57,16 @@
   });
 
   socket.on('question-revealed', data => {
-    $('questionText').textContent = data.text;
-    $('questionText').style.color = 'white';
-    $('questionText').style.fontStyle = 'normal';
+    // Gradual reveal
+    const text = data.text;
+    let i = 0;
+    const interval = setInterval(() => {
+      $('questionText').textContent = text.slice(0, i + 1);
+      $('questionText').style.color = 'white';
+      $('questionText').style.fontStyle = 'normal';
+      i++;
+      if (i >= text.length) clearInterval(interval);
+    }, 50); // 50ms per character
     $('questionNumber').textContent = `Q${data.index + 1}`;
     currentQIndex = data.index;
     // Re-enable buzz

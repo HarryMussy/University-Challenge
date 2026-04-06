@@ -88,6 +88,7 @@
     const teamLabel = team ? ` (${team.name})` : '';
     $('buzzStatusBox').innerHTML = `<span class="buzz-alert">🔔 ${data.name}${teamLabel} buzzed in!</span>`;
     $('buzzSound').play();
+    $('tenseMusic').pause();
   });
 
   socket.on('score-update', data => {

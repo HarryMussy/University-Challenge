@@ -125,6 +125,7 @@
     $('teamModeBtn').classList.toggle('active', m === 'teams');
     $('soloModeBtn').classList.toggle('active', m === 'solo');
     $('teamConfig').style.display = m === 'teams' ? '' : 'none';
+    if (m === 'solo') teams = [];
   }
 
   // ── Team count ──
