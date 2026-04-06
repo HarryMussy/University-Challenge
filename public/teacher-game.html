@@ -68,12 +68,16 @@
 
   $('totalQuestions').textContent = `/ ${questions.length}`;
 
-  // Connect socket as host (already joined from lobby)
+  // Connect socket as host (re-create for game events)
   const socket = io();
 
   socket.on('connect', () => {
     console.log('[TEACHER GAME] socket connected:', socket.id);
-    // Room already created, just listen
+    socket.emit('host-create', { room, teams, gameMode, questions });
+  });
+
+  socket.on('host-room-created', () => {
+    // Room re-created
   });
 
   socket.on('buzzed', data => {

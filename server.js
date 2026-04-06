@@ -52,13 +52,15 @@ io.on('connection', (socket) => {
     r.teams = teams;
     r.gameMode = gameMode;
     r.questions = questions;
-    r.scores = {};
-    r.players = {};
-    if (gameMode === 'teams') teams.forEach(t => r.scores[t.id] = 0);
+    if (!r.scores) {
+      r.scores = {};
+      if (gameMode === 'teams') teams.forEach(t => r.scores[t.id] = 0);
+    }
+    if (!r.players) r.players = {};
     socket.join(room);
     socket.room = room;
     socket.role = 'host';
-    console.log(`Host created room ${room}`);
+    console.log(`Host created/re-joined room ${room}`);
     socket.emit('host-room-created', { room });
   });
 
@@ -199,8 +201,13 @@ io.on('connection', (socket) => {
       const r = rooms[socket.room];
       if (r) {
         if (socket.role === 'host') {
-          io.to(socket.room).emit('host-disconnected');
-          delete rooms[socket.room];
+          // Don't delete immediately, allow time for page navigation
+          setTimeout(() => {
+            if (rooms[socket.room]) {
+              console.log(`Deleting room ${socket.room} after host disconnect timeout`);
+              delete rooms[socket.room];
+            }
+          }, 15000); // 15 seconds
         } else {
           delete r.players[socket.id];
           if (r.hostSocketId) {
