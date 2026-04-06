@@ -68,6 +68,13 @@ io.on('connection', (socket) => {
       socket.emit('join-error', { message: 'Room not found. Check your code.' });
       return;
     }
+    // Remove any existing player with the same name
+    for (let sid in r.players) {
+      if (r.players[sid].name === name) {
+        delete r.players[sid];
+        break;
+      }
+    }
     r.players[socket.id] = { name, teamId: teamId || null };
     if (r.gameMode === 'solo') r.scores[name] = r.scores[name] || 0;
     socket.join(room);
@@ -159,6 +166,26 @@ io.on('connection', (socket) => {
     if (!r) return;
     const q = r.questions[r.currentQ];
     // Only host needs answer locally; no broadcast needed unless you want students to see it
+  });
+
+  // HOST kick player
+  socket.on('host-kick-player', ({ room, playerId }) => {
+    const r = rooms[room];
+    if (!r) return;
+    const playerName = r.players[playerId]?.name || 'Unknown';
+    delete r.players[playerId];
+    // Emit to host
+    io.to(r.hostSocketId).emit('player-left', {
+      id: playerId,
+      name: playerName,
+      playerCount: Object.keys(r.players).length
+    });
+    // Emit to the kicked player
+    const playerSocket = io.sockets.sockets.get(playerId);
+    if (playerSocket) {
+      playerSocket.emit('kicked');
+      playerSocket.disconnect();
+    }
   });
 
   // Disconnect cleanup

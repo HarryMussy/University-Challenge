@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <link rel="stylesheet" href="style.css">
+  <link rel="preload" href="style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
 </head>
 <body>
 <div class="page-light" style="min-height:100vh;">
@@ -265,8 +265,15 @@
     if (!entries.length) { el.innerHTML = '<p class="waiting-text">Waiting for players to join…</p>'; return; }
     entries.forEach(([id, data]) => {
       const chip = document.createElement('div'); chip.className = 'player-chip';
+      const nameSpan = document.createElement('span'); nameSpan.textContent = data.name;
+      chip.appendChild(nameSpan);
       const team = teams.find(t => t.id === data.teamId);
-      chip.innerHTML = `<span>${data.name}</span>${team ? `<span class="player-team-tag" style="background:${team.colour}">${team.name}</span>` : ''}`;
+      if (team) {
+        const teamTag = document.createElement('span'); teamTag.className = 'player-team-tag'; teamTag.style.background = team.colour; teamTag.textContent = team.name;
+        chip.appendChild(teamTag);
+      }
+      const kickBtn = document.createElement('button'); kickBtn.className = 'btn btn-danger btn-sm kick-btn'; kickBtn.textContent = 'Kick'; kickBtn.onclick = () => kickPlayer(id);
+      chip.appendChild(kickBtn);
       el.appendChild(chip);
     });
   }
@@ -276,6 +283,10 @@
     const hasP = Object.keys(players).length > 0;
     $('startGameBtn').disabled = !(hasQ && hasP && currentRoom);
     $('startGameBtn').textContent = !hasQ ? 'Upload questions first' : !hasP ? 'Waiting for players…' : 'Start Game';
+  }
+
+  function kickPlayer(id) {
+    socket.emit('host-kick-player', { room: currentRoom, playerId: id });
   }
 
   // ── Start Game ──

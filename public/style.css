@@ -160,6 +160,7 @@ body { font-family: var(--font-body); background: var(--ink); min-height: 100vh;
 .player-chip { display: flex; align-items: center; justify-content: space-between; background: white; border: 2px solid var(--ink); border-radius: 8px; padding: 0.4rem 0.75rem; font-weight: 700; font-size: 0.9rem; animation: chipIn 0.3s ease-out; }
 @keyframes chipIn { from { opacity:0; transform: translateX(-10px); } to { opacity:1; transform:none; } }
 .player-team-tag { font-size: 0.72rem; font-weight: 800; padding: 0.15rem 0.5rem; border-radius: 4px; background: var(--gold); color: var(--ink); }
+.kick-btn { margin-left: auto; }
 
 /* ── Team selection ──────────────────────────── */
 .teams-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }

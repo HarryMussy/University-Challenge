@@ -6,7 +6,7 @@
   <title>Play — University Challenge</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="preload" href="style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
 </head>
 <body style="background:#1a1a2e;">
 
@@ -111,6 +111,13 @@
   socket.on('host-disconnected', () => {
     alert('The host has disconnected.');
     window.location.href = '/';
+  });
+
+  socket.on('kicked', () => {
+    alert('You have been kicked from the room.');
+    Session.clearStudent();
+    Session.clearGame();
+    window.location.href = '/join';
   });
 
   $('buzzButton').onclick = () => {
