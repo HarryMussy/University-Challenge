@@ -297,13 +297,10 @@ io.on('connection', (socket) => {
             r.hostSocketId = null;
             console.log(`[HOST DISCONNECT] Host disconnected from room ${socket.room}`);
             
-            // If still in lobby phase, destroy the room entirely
-            if (!r.gameActive) {
-              io.to(socket.room).emit('lobby-closed', { message: 'The teacher has left the lobby.' });
-              delete rooms[socket.room];
-              console.log(`[ROOM DESTROYED] Room ${socket.room} destroyed - host left during lobby`);
-            }
-            // If game is active, keep room alive so students can finish playing
+            // Destroy room and notify students to disconnect
+            io.to(socket.room).emit('host-left');
+            delete rooms[socket.room];
+            console.log(`[ROOM DESTROYED] Room ${socket.room} destroyed - host disconnected`);
           }
         } else {
           // Student disconnected

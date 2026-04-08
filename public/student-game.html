@@ -194,6 +194,13 @@
     window.location.href = '/join';
   });
 
+  socket.on('host-left', () => {
+    alert('The teacher has left. Game ended.');
+    Session.clearStudent();
+    Session.clearGame();
+    window.location.href = '/join';
+  });
+
   $('buzzButton').onclick = () => {
     if (myBuzzed || $('buzzButton').disabled || !studentReady) {
       console.log('[BUZZ BLOCKED]', { myBuzzed, disabled: $('buzzButton').disabled, studentReady });
