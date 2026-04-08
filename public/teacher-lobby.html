@@ -286,8 +286,24 @@
   function updateStartBtn() {
     const hasQ = questions.length > 0;
     const hasP = Object.keys(players).length > 0;
-    $('startGameBtn').disabled = !(hasQ && hasP && currentRoom);
-    $('startGameBtn').textContent = !hasQ ? 'Upload questions first' : !hasP ? 'Waiting for players…' : 'Start Game';
+    
+    // For team mode, check that all players have selected a team
+    let allTeamsSelected = true;
+    if (gameMode === 'teams' && hasP) {
+      allTeamsSelected = Object.values(players).every(p => p.teamId !== null && p.teamId !== undefined);
+    }
+    
+    $('startGameBtn').disabled = !(hasQ && hasP && currentRoom && allTeamsSelected);
+    
+    if (!hasQ) {
+      $('startGameBtn').textContent = 'Upload questions first';
+    } else if (!hasP) {
+      $('startGameBtn').textContent = 'Waiting for players…';
+    } else if (gameMode === 'teams' && !allTeamsSelected) {
+      $('startGameBtn').textContent = 'All players must select a team';
+    } else {
+      $('startGameBtn').textContent = 'Start Game';
+    }
   }
 
   function kickPlayer(id) {

@@ -72,8 +72,8 @@
 
   socket.on('mode-changed', data => {
     // Teacher switched game mode
-    Session.saveStudent({ ...student, gameMode: data.gameMode, teams: [] });
-    showCorrectView(data.gameMode, []);
+    Session.saveStudent({ ...student, gameMode: data.gameMode, teams: data.teams || [] });
+    showCorrectView(data.gameMode, data.teams || []);
   });
 
   socket.on('game-started', data => {

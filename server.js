@@ -86,7 +86,7 @@ io.on('connection', (socket) => {
     } else {
       Object.values(r.players).forEach(p => r.scores[p.name] = (r.scores[p.name] || 0));
     }
-    io.to(room).emit('mode-changed', { gameMode, scores: r.scores });
+    io.to(room).emit('mode-changed', { gameMode, teams: r.teams, scores: r.scores });
   });
 
   // STUDENT joins room
@@ -281,18 +281,18 @@ io.on('connection', (socket) => {
       const r = rooms[socket.room];
       if (r) {
         if (socket.role === 'host') {
-          // Only kick students if game is actively being played
-          if (r.gameActive) {
-            console.log(`[KICK] Host disconnected during active game in ${socket.room}`);
-            for (let sid in r.players) {
-              const playerSocket = io.sockets.sockets.get(sid);
-              if (playerSocket) {
-                playerSocket.emit('kicked');
-                playerSocket.disconnect();
-              }
-            }
+          // Host disconnected - just clear hostSocketId, don't kick students
+          // This allows the host to reconnect or a new host to take over
+          // Students will stay in the room and wait
+          if (socket.id === r.hostSocketId) {
+            r.hostSocketId = null;
+            console.log(`[HOST DISCONNECT] Host disconnected from room ${socket.room}, clearing hostSocketId`);
           }
-          delete rooms[socket.room];
+          // Only delete room if game is NOT active
+          // If game is active, keep it alive for students
+          if (!r.gameActive) {
+            delete rooms[socket.room];
+          }
         } else {
           delete r.players[socket.id];
           if (r.hostSocketId) {
