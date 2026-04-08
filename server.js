@@ -216,14 +216,28 @@ io.on('connection', (socket) => {
   });
 
   // HOST resets game for play-again
-  socket.on('host-reset-game', ({ room }) => {
+  socket.on('host-reset-game', ({ room, questions }) => {
     const r = rooms[room];
     if (!r || socket.id !== r.hostSocketId) return;
     r.gameActive = true;
     r.currentQ = 0;
     r.buzzed = false;
-    // Shuffle questions again
-    r.questions = shuffle(r.questions);
+    // Update questions if provided (for consistency)
+    if (questions && questions.length > 0) {
+      r.questions = shuffle(questions);
+    } else {
+      r.questions = shuffle(r.questions);
+    }
+    // Reset all scores
+    r.scores = {};
+    if (r.gameMode === 'teams' && r.teams) {
+      r.teams.forEach(t => r.scores[t.id] = 0);
+    } else {
+      Object.keys(r.players || {}).forEach(pid => {
+        const p = r.players[pid];
+        if (p && p.name) r.scores[p.name] = 0;
+      });
+    }
     console.log(`[GAME RESET] Game reset in room ${room}`);
     io.to(room).emit('game-reset', {
       gameMode: r.gameMode,

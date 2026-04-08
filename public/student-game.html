@@ -41,6 +41,7 @@
   let scores = { ...initialScores };
   let myBuzzed = false;
   let currentQIndex = 0;
+  let studentReady = false; // Track if we've successfully joined
 
   // Set team display
   const myTeam = teams && teams.find(t => t.id === myTeamId);
@@ -54,6 +55,17 @@
     console.log('[STUDENT GAME] socket connected:', socket.id);
     // Re-join room to receive game events
     socket.emit('student-join', { room, name, teamId: myTeamId });
+  });
+
+  socket.on('room-info', () => {
+    console.log('[STUDENT GAME] Student joined room successfully');
+    studentReady = true;
+  });
+
+  socket.on('join-error', (data) => {
+    console.error('[STUDENT GAME] Join failed:', data.message);
+    alert('Error: ' + data.message);
+    window.location.href = '/join';
   });
 
   let revealInterval = null;
@@ -147,13 +159,15 @@
 
   socket.on('game-reset', data => {
     scores = { ...data.scores };
-    // Remove the overlay and re-enable UI
+    // Remove the game-ended overlay and re-enable UI
     const overlay = document.querySelector('[style*="position:fixed"]');
     if (overlay) overlay.remove();
     const studentView = document.querySelector('.student-view');
-    studentView.style.opacity = '1';
-    studentView.style.pointerEvents = 'auto';
-    // Reset UI
+    if (studentView) {
+      studentView.style.opacity = '1';
+      studentView.style.pointerEvents = 'auto';
+    }
+    // Reset UI state and redirect back to lobby to select team if needed
     $('questionText').textContent = 'Waiting for question…';
     $('questionText').style.color = 'rgba(255,255,255,0.4)';
     $('questionText').style.fontStyle = 'italic';
@@ -161,7 +175,11 @@
     $('buzzedIndicator').classList.add('hidden');
     $('resultMessage').classList.add('hidden');
     myBuzzed = false;
-    updateScore();
+    
+    // Update session and redirect to lobby
+    Session.saveStudent({ ...game, gameMode: data.gameMode, teams: data.teams });
+    Session.clearGame();
+    window.location.href = '/student-lobby';
   });
 
   socket.on('host-disconnected', () => {
@@ -177,7 +195,10 @@
   });
 
   $('buzzButton').onclick = () => {
-    if (myBuzzed || $('buzzButton').disabled) return;
+    if (myBuzzed || $('buzzButton').disabled || !studentReady) {
+      console.log('[BUZZ BLOCKED]', { myBuzzed, disabled: $('buzzButton').disabled, studentReady });
+      return;
+    }
     myBuzzed = true;
     $('buzzButton').disabled = true;
     console.log('[STUDENT] Buzzing in:', { room, name, teamId: myTeamId });
