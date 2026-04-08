@@ -130,7 +130,38 @@
   socket.on('game-ended', data => {
     scores = data.scores;
     Session.saveGame({ ...game, scores });
-    window.location.href = '/results';
+    // Show game ended screen and wait for teacher to play again or leave
+    const studentView = document.querySelector('.student-view');
+    studentView.style.opacity = '0.5';
+    studentView.style.pointerEvents = 'none';
+    const endOverlay = document.createElement('div');
+    endOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;z-index:1000;font-family:Bangers,Impact,sans-serif;';
+    endOverlay.innerHTML = `
+      <h1 style="font-size:3rem;margin-bottom:2rem;color:#FFD93D;">Game Over!</h1>
+      <p style="font-size:1.2rem;font-family:Nunito,sans-serif;margin-bottom:1rem;">Waiting for the host…</p>
+      <div style="width:20px;height:20px;background:#6BCF7F;border-radius:50%;animation:pulse 1.2s infinite;\"></div>
+      <style>@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.3)} }</style>
+    `;
+    document.body.appendChild(endOverlay);
+  });
+
+  socket.on('game-reset', data => {
+    scores = { ...data.scores };
+    // Remove the overlay and re-enable UI
+    const overlay = document.querySelector('[style*="position:fixed"]');
+    if (overlay) overlay.remove();
+    const studentView = document.querySelector('.student-view');
+    studentView.style.opacity = '1';
+    studentView.style.pointerEvents = 'auto';
+    // Reset UI
+    $('questionText').textContent = 'Waiting for question…';
+    $('questionText').style.color = 'rgba(255,255,255,0.4)';
+    $('questionText').style.fontStyle = 'italic';
+    $('buzzButton').disabled = false;
+    $('buzzedIndicator').classList.add('hidden');
+    $('resultMessage').classList.add('hidden');
+    myBuzzed = false;
+    updateScore();
   });
 
   socket.on('host-disconnected', () => {
@@ -146,9 +177,10 @@
   });
 
   $('buzzButton').onclick = () => {
-    if (myBuzzed) return;
+    if (myBuzzed || $('buzzButton').disabled) return;
     myBuzzed = true;
     $('buzzButton').disabled = true;
+    console.log('[STUDENT] Buzzing in:', { room, name, teamId: myTeamId });
     socket.emit('buzz', { room, name, teamId: myTeamId });
   };
 

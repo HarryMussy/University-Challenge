@@ -113,7 +113,6 @@
     buzzedTeamId = null;
     $('revealQuestionBtn').disabled = false;
     renderScores();
-    updateQSelectorUI();
   }
 
   $('revealQuestionBtn').onclick = () => {
@@ -182,43 +181,6 @@
     $('tenseMusic').currentTime = 0;
   };
 
-  // ── Question selector for any order ──
-  const qSelector = document.createElement('div');
-  qSelector.className = 'questions-selector';
-  qSelector.style.cssText = 'max-height:auto;overflow-y:auto;max-height:200px;border:1px solid rgba(255,255,255,0.2);border-radius:8px;margin-bottom:1rem;';
-  const qList = document.createElement('div');
-  qList.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:0.5rem;padding:0.5rem;';
-  questions.forEach((q, idx) => {
-    const btn = document.createElement('button');
-    btn.textContent = `Q${idx+1}`;
-    btn.className = 'btn btn-sm';
-    btn.style.cssText = `padding:0.4rem;font-size:0.8rem;${idx === 0 ? 'background:#FFD93D;color:#0d0d1a;' : ''}`;
-    btn.onclick = () => {
-      currentQ = idx;
-      socket.emit('host-select-question', { room, index: idx });
-      displayQuestion();
-      $('tenseMusic').pause();
-      $('tenseMusic').currentTime = 0;
-      updateQSelectorUI();
-    };
-    qList.appendChild(btn);
-  });
-  qSelector.appendChild(qList);
-  document.querySelector('.host-main').insertBefore(qSelector, document.querySelector('.host-controls'));
-
-  function updateQSelectorUI() {
-    const btns = qSelector.querySelectorAll('button');
-    btns.forEach((btn, idx) => {
-      if (idx === currentQ) {
-        btn.style.background = '#FFD93D';
-        btn.style.color = '#0d0d1a';
-      } else {
-        btn.style.background = '';
-        btn.style.color = '';
-      }
-    });
-  }
-
   function renderScores() {
     const el = $('scoresList'); el.innerHTML = '';
     const entries = Object.entries(scores).sort((a,b) => b[1]-a[1]);
@@ -240,11 +202,42 @@
   }
 
   function endGame() {
-    Session.saveGame({ teams, scores, gameMode });
+    Session.saveGame({ teams, scores, gameMode, room });
     socket.emit('host-next-question', { room }); // triggers game-ended on server
-    window.location.href = '/results';
     $('tenseMusic').pause();
     $('tenseMusic').currentTime = 0;
+    // Show end game screen with play again button
+    const hostView = document.querySelector('.host-view');
+    hostView.style.display = 'none';
+    const endOverlay = document.createElement('div');
+    endOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#1a1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;z-index:1000;';
+    endOverlay.innerHTML = `
+      <h1 style="font-family:Bangers,Impact,sans-serif;font-size:3rem;margin-bottom:1rem;color:#FFD93D;">Game Ended!</h1>
+      <p style="font-size:1.1rem;margin-bottom:2rem;">All questions answered.</p>
+      <button id="playAgainBtn" style="padding:0.75rem 1.75rem;border:3px solid white;border-radius:10px;background:#FFD93D;color:#0d0d1a;font-weight:800;font-size:1.1rem;cursor:pointer;margin-right:1rem;">Play Again</button>
+      <button id="viewResultsBtn" style="padding:0.75rem 1.75rem;border:3px solid #FFD93D;border-radius:10px;background:transparent;color:#FFD93D;font-weight:800;font-size:1.1rem;cursor:pointer;margin-top:1rem;">View Results</button>
+    `;
+    document.body.appendChild(endOverlay);
+    
+    $('playAgainBtn').onclick = () => {
+      endOverlay.remove();
+      hostView.style.display = '';
+      // Reset for new game
+      currentQ = 0;
+      scores = {};
+      Object.keys(questions).forEach(idx => {
+        if (gameMode === 'teams') {
+          teams.forEach(t => scores[t.id] = 0);
+        }
+      });
+      console.log('[TEACHER] Requesting game reset');
+      socket.emit('host-reset-game', { room });
+      displayQuestion();
+    };
+    
+    $('viewResultsBtn').onclick = () => {
+      window.location.href = '/results';
+    };
   }
 
   // Start

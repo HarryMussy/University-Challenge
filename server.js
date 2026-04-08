@@ -3,6 +3,16 @@ const { createServer } = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 
+// Fisher-Yates shuffle
+function shuffle(array) {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 const app = express();
 const server = createServer(app);
 const io = new Server(server, {
@@ -128,6 +138,8 @@ io.on('connection', (socket) => {
     r.gameActive = true;
     r.currentQ = 0;
     r.buzzed = false;
+    // Shuffle questions at game start for random order
+    r.questions = shuffle(r.questions);
     io.to(room).emit('game-started', {
       gameMode: r.gameMode,
       teams: r.teams,
@@ -146,9 +158,17 @@ io.on('connection', (socket) => {
   // STUDENT buzzes
   socket.on('buzz', ({ room, name, teamId }) => {
     const r = rooms[room];
-    if (!r || !r.gameActive || r.buzzed) return;
+    if (!r || !r.gameActive) {
+      console.log('[BUZZ FAIL] Room not found or game not active');
+      return;
+    }
+    if (r.buzzed) {
+      console.log('[BUZZ FAIL] Someone already buzzed');
+      return;
+    }
     r.buzzed = true;
     // Only first buzz counts; host tracks this but we broadcast to all
+    console.log(`[BUZZ SUCCESS] ${name} buzzed in room ${room}`);
     io.to(room).emit('buzzed', { name, teamId, socketId: socket.id });
     io.to(room).emit('question-paused'); // Pause the reveal
   });
@@ -195,6 +215,23 @@ io.on('connection', (socket) => {
     io.to(room).emit('question-selected', { index });
   });
 
+  // HOST resets game for play-again
+  socket.on('host-reset-game', ({ room }) => {
+    const r = rooms[room];
+    if (!r || socket.id !== r.hostSocketId) return;
+    r.gameActive = true;
+    r.currentQ = 0;
+    r.buzzed = false;
+    // Shuffle questions again
+    r.questions = shuffle(r.questions);
+    console.log(`[GAME RESET] Game reset in room ${room}`);
+    io.to(room).emit('game-reset', {
+      gameMode: r.gameMode,
+      teams: r.teams,
+      scores: r.scores,
+    });
+  });
+
   // HOST reveals answer (just to room for display)
   socket.on('host-reveal-answer', ({ room }) => {
     const r = rooms[room];
@@ -230,12 +267,15 @@ io.on('connection', (socket) => {
       const r = rooms[socket.room];
       if (r) {
         if (socket.role === 'host') {
-          // Kick all students immediately
-          for (let sid in r.players) {
-            const playerSocket = io.sockets.sockets.get(sid);
-            if (playerSocket) {
-              playerSocket.emit('kicked');
-              playerSocket.disconnect();
+          // Only kick students if game is actively being played
+          if (r.gameActive) {
+            console.log(`[KICK] Host disconnected during active game in ${socket.room}`);
+            for (let sid in r.players) {
+              const playerSocket = io.sockets.sockets.get(sid);
+              if (playerSocket) {
+                playerSocket.emit('kicked');
+                playerSocket.disconnect();
+              }
             }
           }
           delete rooms[socket.room];

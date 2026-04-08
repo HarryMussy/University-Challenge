@@ -100,6 +100,24 @@
     window.location.href = '/join';
   });
 
+  // ── Parallax background dots ──
+  const lobbyPage = $('lobbyPage');
+  let mouseX = 0, mouseY = 0;
+  
+  document.addEventListener('mousemove', e => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    
+    // Calculate offset from center
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    const offsetX = (mouseX - centerX) * 0.02; // 2% parallax intensity
+    const offsetY = (mouseY - centerY) * 0.02;
+    
+    // Apply transform to background
+    lobbyPage.style.backgroundPosition = `calc(50% + ${offsetX}px) calc(50% + ${offsetY}px)`;
+  }, { passive: true });
+
   // Show correct view
   function showCorrectView(mode, teamList) {
     $('loadingView').classList.add('hidden');
