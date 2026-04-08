@@ -120,7 +120,12 @@
 
   // Show correct view
   function showCorrectView(mode, teamList) {
+    // Hide all views first
     $('loadingView').classList.add('hidden');
+    $('teamSelectView').classList.add('hidden');
+    $('soloWaitView').classList.add('hidden');
+    
+    // Show the correct view based on mode
     if (mode === 'teams' && teamList && teamList.length > 0) {
       $('playerNameDisplay').textContent = name;
       renderTeams(teamList);

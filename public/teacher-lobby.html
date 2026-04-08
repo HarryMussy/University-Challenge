@@ -307,8 +307,15 @@
       scores: Object.fromEntries(teams.map(t => [t.id, 0]))
     });
 
+    $('startGameBtn').disabled = true;
+    $('startGameBtn').textContent = 'Starting…';
     socket.emit('host-start-game', { room: currentRoom });
-    window.location.href = '/teacher-game';
+    
+    // Delay navigation to allow students to receive game-started event
+    // before the old socket disconnects
+    setTimeout(() => {
+      window.location.href = '/teacher-game';
+    }, 300);
   };
 })();
 </script>
