@@ -126,6 +126,10 @@
     $('soloModeBtn').classList.toggle('active', m === 'solo');
     $('teamConfig').style.display = m === 'teams' ? '' : 'none';
     if (m === 'solo') teams = [];
+    // If room is active and socket connected, notify students
+    if (socket && currentRoom) {
+      socket.emit('host-change-mode', { room: currentRoom, gameMode: m });
+    }
   }
 
   // ── Team count ──

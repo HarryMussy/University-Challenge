@@ -113,6 +113,7 @@
     buzzedTeamId = null;
     $('revealQuestionBtn').disabled = false;
     renderScores();
+    updateQSelectorUI();
   }
 
   $('revealQuestionBtn').onclick = () => {
@@ -180,6 +181,43 @@
     $('tenseMusic').pause();
     $('tenseMusic').currentTime = 0;
   };
+
+  // ── Question selector for any order ──
+  const qSelector = document.createElement('div');
+  qSelector.className = 'questions-selector';
+  qSelector.style.cssText = 'max-height:auto;overflow-y:auto;max-height:200px;border:1px solid rgba(255,255,255,0.2);border-radius:8px;margin-bottom:1rem;';
+  const qList = document.createElement('div');
+  qList.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:0.5rem;padding:0.5rem;';
+  questions.forEach((q, idx) => {
+    const btn = document.createElement('button');
+    btn.textContent = `Q${idx+1}`;
+    btn.className = 'btn btn-sm';
+    btn.style.cssText = `padding:0.4rem;font-size:0.8rem;${idx === 0 ? 'background:#FFD93D;color:#0d0d1a;' : ''}`;
+    btn.onclick = () => {
+      currentQ = idx;
+      socket.emit('host-select-question', { room, index: idx });
+      displayQuestion();
+      $('tenseMusic').pause();
+      $('tenseMusic').currentTime = 0;
+      updateQSelectorUI();
+    };
+    qList.appendChild(btn);
+  });
+  qSelector.appendChild(qList);
+  document.querySelector('.host-main').insertBefore(qSelector, document.querySelector('.host-controls'));
+
+  function updateQSelectorUI() {
+    const btns = qSelector.querySelectorAll('button');
+    btns.forEach((btn, idx) => {
+      if (idx === currentQ) {
+        btn.style.background = '#FFD93D';
+        btn.style.color = '#0d0d1a';
+      } else {
+        btn.style.background = '';
+        btn.style.color = '';
+      }
+    });
+  }
 
   function renderScores() {
     const el = $('scoresList'); el.innerHTML = '';

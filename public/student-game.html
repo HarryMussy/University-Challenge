@@ -56,21 +56,39 @@
     socket.emit('student-join', { room, name, teamId: myTeamId });
   });
 
+  let revealInterval = null;
+
   socket.on('question-revealed', data => {
     // Gradual reveal
     const text = data.text;
     let i = 0;
-    const interval = setInterval(() => {
+    revealInterval = setInterval(() => {
       $('questionText').textContent = text.slice(0, i + 1);
       $('questionText').style.color = 'white';
       $('questionText').style.fontStyle = 'normal';
       i++;
-      if (i >= text.length) clearInterval(interval);
+      if (i >= text.length) clearInterval(revealInterval);
     }, 50); // 50ms per character
     $('questionNumber').textContent = `Q${data.index + 1}`;
     currentQIndex = data.index;
     // Re-enable buzz
     $('buzzButton').disabled = false;
+    $('buzzedIndicator').classList.add('hidden');
+    $('resultMessage').classList.add('hidden');
+    myBuzzed = false;
+  });
+
+  socket.on('question-paused', () => {
+    // Stop the gradual reveal when someone buzzes
+    if (revealInterval) clearInterval(revealInterval);
+  });
+
+  socket.on('next-question', data => {
+    // Advance to next question
+    if (revealInterval) clearInterval(revealInterval);
+    $('questionText').textContent = 'Waiting for question…';
+    $('questionText').style.color = 'rgba(255,255,255,0.4)';
+    $('questionText').style.fontStyle = 'italic';
     $('buzzedIndicator').classList.add('hidden');
     $('resultMessage').classList.add('hidden');
     myBuzzed = false;
