@@ -292,19 +292,21 @@ io.on('connection', (socket) => {
       const r = rooms[socket.room];
       if (r) {
         if (socket.role === 'host') {
-          // Host disconnected - just clear hostSocketId, don't kick students
-          // This allows the host to reconnect or a new host to take over
-          // Students will stay in the room and wait
+          // Host disconnected
           if (socket.id === r.hostSocketId) {
             r.hostSocketId = null;
-            console.log(`[HOST DISCONNECT] Host disconnected from room ${socket.room}, clearing hostSocketId`);
-          }
-          // Only delete room if game is NOT active
-          // If game is active, keep it alive for students
-          if (!r.gameActive) {
-            delete rooms[socket.room];
+            console.log(`[HOST DISCONNECT] Host disconnected from room ${socket.room}`);
+            
+            // If still in lobby phase, destroy the room entirely
+            if (!r.gameActive) {
+              io.to(socket.room).emit('lobby-closed', { message: 'The teacher has left the lobby.' });
+              delete rooms[socket.room];
+              console.log(`[ROOM DESTROYED] Room ${socket.room} destroyed - host left during lobby`);
+            }
+            // If game is active, keep room alive so students can finish playing
           }
         } else {
+          // Student disconnected
           delete r.players[socket.id];
           if (r.hostSocketId) {
             io.to(r.hostSocketId).emit('player-left', {

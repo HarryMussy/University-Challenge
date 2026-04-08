@@ -101,6 +101,12 @@
     window.location.href = '/join';
   });
 
+  socket.on('lobby-closed', () => {
+    alert('The teacher has left the lobby.');
+    Session.clearStudent();
+    window.location.href = '/join';
+  });
+
   // ── Parallax background dots ──
   const lobbyPage = $('lobbyPage');
   let mouseX = 0, mouseY = 0;
