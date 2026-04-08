@@ -79,6 +79,10 @@ io.on('connection', (socket) => {
     const r = rooms[room];
     if (!r || socket.id !== r.hostSocketId) return;
     r.gameMode = gameMode;
+    // Clear team assignments if switching to solo mode
+    if (gameMode === 'solo') {
+      Object.values(r.players).forEach(p => p.teamId = null);
+    }
     // Reset scores based on new mode
     r.scores = {};
     if (gameMode === 'teams') {
@@ -92,8 +96,13 @@ io.on('connection', (socket) => {
   // STUDENT joins room
   socket.on('student-join', ({ room, name, teamId }) => {
     const r = rooms[room];
-    if (!r || !r.hostSocketId) {
+    if (!r) {
       socket.emit('join-error', { message: 'Room not found. Check your code.' });
+      return;
+    }
+    // Only require host during lobby phase (before game starts)
+    if (!r.gameActive && !r.hostSocketId) {
+      socket.emit('join-error', { message: 'Host connection lost. Please wait.' });
       return;
     }
     // Remove any existing player with the same name
@@ -114,13 +123,15 @@ io.on('connection', (socket) => {
     // Tell the student the room config
     socket.emit('room-info', { teams: r.teams, gameMode: r.gameMode });
 
-    // Tell host a new player joined
-    io.to(r.hostSocketId).emit('player-joined', {
-      id: socket.id,
-      name,
-      teamId: teamId || null,
-      playerCount: Object.keys(r.players).length
-    });
+    // Tell host a new player joined (only if host is connected during lobby)
+    if (r.hostSocketId) {
+      io.to(r.hostSocketId).emit('player-joined', {
+        id: socket.id,
+        name,
+        teamId: teamId || null,
+        playerCount: Object.keys(r.players).length
+      });
+    }
   });
 
   // STUDENT selects team

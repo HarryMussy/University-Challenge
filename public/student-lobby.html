@@ -71,7 +71,8 @@
   });
 
   socket.on('mode-changed', data => {
-    // Teacher switched game mode
+    // Teacher switched game mode - clear team selection if switching to solo
+    myTeamId = null;
     Session.saveStudent({ ...student, gameMode: data.gameMode, teams: data.teams || [] });
     showCorrectView(data.gameMode, data.teams || []);
   });
