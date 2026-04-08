@@ -64,6 +64,21 @@ io.on('connection', (socket) => {
     socket.emit('host-room-created', { room });
   });
 
+  // HOST changes game mode
+  socket.on('host-change-mode', ({ room, gameMode }) => {
+    const r = rooms[room];
+    if (!r || socket.id !== r.hostSocketId) return;
+    r.gameMode = gameMode;
+    // Reset scores based on new mode
+    r.scores = {};
+    if (gameMode === 'teams') {
+      r.teams.forEach(t => r.scores[t.id] = 0);
+    } else {
+      Object.values(r.players).forEach(p => r.scores[p.name] = (r.scores[p.name] || 0));
+    }
+    io.to(room).emit('mode-changed', { gameMode, scores: r.scores });
+  });
+
   // STUDENT joins room
   socket.on('student-join', ({ room, name, teamId }) => {
     const r = rooms[room];
@@ -135,6 +150,7 @@ io.on('connection', (socket) => {
     r.buzzed = true;
     // Only first buzz counts; host tracks this but we broadcast to all
     io.to(room).emit('buzzed', { name, teamId, socketId: socket.id });
+    io.to(room).emit('question-paused'); // Pause the reveal
   });
 
   // HOST marks answer
@@ -147,6 +163,9 @@ io.on('connection', (socket) => {
       r.scores[buzzedTeamId] = (r.scores[buzzedTeamId] || 0) + pts;
     } else if (buzzedName) {
       r.scores[buzzedName] = (r.scores[buzzedName] || 0) + pts;
+    }
+    if (!correct) {
+      r.questions.push(q); // Re-add incorrect question at the end
     }
     io.to(room).emit('answer-result', { correct, points: pts, buzzedBy: buzzedName });
     io.to(room).emit('score-update', { scores: r.scores });
@@ -162,8 +181,18 @@ io.on('connection', (socket) => {
       r.gameActive = false;
       io.to(room).emit('game-ended', { scores: r.scores });
     } else {
+      io.to(room).emit('next-question', { currentQ: r.currentQ });
       io.to(room).emit('buzz-reset');
     }
+  });
+
+  // HOST selects specific question
+  socket.on('host-select-question', ({ room, index }) => {
+    const r = rooms[room];
+    if (!r || socket.id !== r.hostSocketId) return;
+    r.currentQ = index;
+    r.buzzed = false;
+    io.to(room).emit('question-selected', { index });
   });
 
   // HOST reveals answer (just to room for display)
@@ -201,13 +230,15 @@ io.on('connection', (socket) => {
       const r = rooms[socket.room];
       if (r) {
         if (socket.role === 'host') {
-          // Don't delete immediately, allow time for page navigation
-          setTimeout(() => {
-            if (rooms[socket.room]) {
-              console.log(`Deleting room ${socket.room} after host disconnect timeout`);
-              delete rooms[socket.room];
+          // Kick all students immediately
+          for (let sid in r.players) {
+            const playerSocket = io.sockets.sockets.get(sid);
+            if (playerSocket) {
+              playerSocket.emit('kicked');
+              playerSocket.disconnect();
             }
-          }, 15000); // 15 seconds
+          }
+          delete rooms[socket.room];
         } else {
           delete r.players[socket.id];
           if (r.hostSocketId) {
