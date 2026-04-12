@@ -269,16 +269,36 @@
     const entries = Object.entries(players);
     if (!entries.length) { el.innerHTML = '<p class="waiting-text">Waiting for players to join…</p>'; return; }
     entries.forEach(([id, data]) => {
-      const chip = document.createElement('div'); chip.className = 'player-chip';
-      const nameSpan = document.createElement('span'); nameSpan.textContent = data.name;
-      chip.appendChild(nameSpan);
+      const chip = document.createElement('div');
+      chip.className = 'player-chip';
+ 
+      // Left side: name + team tag grouped together
+      const info = document.createElement('div');
+      info.className = 'player-chip-info';
+ 
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'player-chip-name';
+      nameSpan.textContent = data.name;
+      info.appendChild(nameSpan);
+ 
       const team = teams.find(t => t.id === data.teamId);
       if (team) {
-        const teamTag = document.createElement('span'); teamTag.className = 'player-team-tag'; teamTag.style.background = team.colour; teamTag.textContent = team.name;
-        chip.appendChild(teamTag);
+        const teamTag = document.createElement('span');
+        teamTag.className = 'player-team-tag';
+        teamTag.style.background = team.colour;
+        teamTag.textContent = team.name;
+        info.appendChild(teamTag);
       }
-      const kickBtn = document.createElement('button'); kickBtn.className = 'btn btn-danger btn-sm kick-btn'; kickBtn.textContent = 'Kick'; kickBtn.onclick = () => kickPlayer(id);
+ 
+      chip.appendChild(info);
+ 
+      // Right side: kick button
+      const kickBtn = document.createElement('button');
+      kickBtn.className = 'btn btn-danger btn-sm kick-btn';
+      kickBtn.textContent = 'Kick';
+      kickBtn.onclick = () => kickPlayer(id);
       chip.appendChild(kickBtn);
+ 
       el.appendChild(chip);
     });
   }

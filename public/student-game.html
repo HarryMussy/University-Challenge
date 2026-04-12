@@ -61,6 +61,13 @@
     studentReady = true;
   });
 
+  // Keep a local copy of the question order — purely for display/tracking
+  // (students don't need to act on it, but having it means future features are easy)
+  socket.on('question-order-updated', data => {
+    console.log('[STUDENT GAME] Question order updated, total:', data.questions.length);
+    // No UI change needed — student just waits for question-revealed
+  });
+
   socket.on('join-error', (data) => {
     console.error('[STUDENT GAME] Join failed:', data.message);
     alert('Error: ' + data.message);

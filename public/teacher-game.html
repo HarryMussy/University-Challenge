@@ -10,13 +10,12 @@
 </head>
 <body style="background:#1a1a2e;">
 
-<audio id="buzzSound"    src="sounds/buzz.mp3"      preload="auto"></audio>
-<audio id="correctSound" src="sounds/correct.mp3"   preload="auto"></audio>
+<audio id="buzzSound"      src="sounds/buzz.mp3"      preload="auto"></audio>
+<audio id="correctSound"   src="sounds/correct.mp3"   preload="auto"></audio>
 <audio id="incorrectSound" src="sounds/incorrect.mp3" preload="auto"></audio>
-<audio id="tenseMusic"   src="sounds/tense.mp3"     loop preload="auto"></audio>
+<audio id="tenseMusic"     src="sounds/tense.mp3"     loop preload="auto"></audio>
 
 <div class="host-view">
-  <!-- Sidebar -->
   <div class="host-sidebar">
     <div class="host-q-meta">
       <span id="questionNumber" class="q-num-badge">Q1</span>
@@ -31,17 +30,16 @@
     </div>
   </div>
 
-  <!-- Main -->
   <div class="host-main">
     <p id="questionText" class="host-question-text" style="color:rgba(255,255,255,0.3);font-style:italic;">
-      Press "Reveal Question" to show the question
+      Waiting for game to start…
     </p>
     <div id="answerReveal" class="host-answer-reveal hidden">
       <span class="ar-label">Correct Answer</span>
       <span id="correctAnswerDisplay" class="ar-answer"></span>
     </div>
     <div class="host-controls">
-      <button id="revealQuestionBtn" class="btn btn-gold">📝 Reveal Question</button>
+      <button id="revealQuestionBtn" class="btn btn-gold" disabled>📝 Reveal Question</button>
       <button id="correctBtn"        class="btn btn-success" disabled>✓ Correct</button>
       <button id="incorrectBtn"      class="btn btn-danger"  disabled>✗ Incorrect</button>
       <button id="nextQuestionBtn"   class="btn btn-primary">Next →</button>
@@ -56,22 +54,24 @@
   const roomData = Session.getRoom();
   if (!roomData) { window.location.href = '/teacher-lobby'; return; }
 
-  const { room, teams, gameMode, questions } = roomData;
+  const { room, teams, gameMode } = roomData;
+  let questions = roomData.questions || [];
   let scores = roomData.scores || {};
   let currentQ = 0;
   let questionRevealed = false;
   let answerRevealed = false;
   let buzzedBy = null;
   let buzzedTeamId = null;
-  let waitingForBuzz = false; // true after reveal, before someone buzzes
   let revealInterval = null;
+  let currentUtterance = null;
+  let gameReady = false;
 
   $('totalQuestions').textContent = `/ ${questions.length}`;
 
   const socket = io();
 
   socket.on('connect', () => {
-    console.log('[TEACHER GAME] socket connected:', socket.id);
+    console.log('[TEACHER GAME] connected:', socket.id);
     socket.emit('host-create', { room, teams, gameMode, questions });
   });
 
@@ -79,12 +79,21 @@
     console.log('[TEACHER GAME] Room ready');
   });
 
-  // FIX: server sends back the shuffled question order — replace local array
-  socket.on('questions-shuffled', data => {
+  // Server sends the canonical shuffled question list to EVERYONE (host + students)
+  // via game-started. This is the single source of truth.
+  socket.on('game-started', data => {
     questions = data.questions;
-    console.log('[TEACHER GAME] Questions shuffled, count:', questions.length);
-    // Refresh the total count display
     $('totalQuestions').textContent = `/ ${questions.length}`;
+    gameReady = true;
+    console.log('[TEACHER GAME] Got shuffled questions:', questions.length);
+    displayQuestion();
+  });
+
+  // When a question is re-queued after wrong answer, server sends updated order
+  socket.on('question-order-updated', data => {
+    questions = data.questions;
+    $('totalQuestions').textContent = `/ ${questions.length}`;
+    console.log('[TEACHER GAME] Question order updated, total:', questions.length);
   });
 
   socket.on('buzzed', data => {
@@ -94,13 +103,14 @@
     const team = teams.find(t => t.id === data.teamId);
     const teamLabel = team ? ` (${team.name})` : '';
     $('buzzStatusBox').innerHTML = `<span class="buzz-alert">🔔 ${data.name}${teamLabel} buzzed in!</span>`;
-    // FIX: Stop the reveal animation on the teacher's screen when someone buzzes
+    // Stop text reveal
     if (revealInterval) { clearInterval(revealInterval); revealInterval = null; }
+    // Stop speech
+    try { speechSynthesis.cancel(); currentUtterance = null; } catch(e) {}
     $('correctBtn').disabled = false;
     $('incorrectBtn').disabled = false;
     try { $('buzzSound').play(); } catch(e) {}
     try { $('tenseMusic').pause(); } catch(e) {}
-    waitingForBuzz = false;
   });
 
   socket.on('score-update', data => {
@@ -108,8 +118,8 @@
     renderScores();
   });
 
-  // ── Display question (local state reset only) ──
   function displayQuestion() {
+    if (!gameReady) return;
     if (currentQ >= questions.length) { endGame(); return; }
     $('questionNumber').textContent = `Q${currentQ + 1}`;
     $('questionText').textContent = 'Press "Reveal Question" to show the question';
@@ -122,19 +132,17 @@
     answerRevealed = false;
     buzzedBy = null;
     buzzedTeamId = null;
-    waitingForBuzz = false;
     $('revealQuestionBtn').disabled = false;
-    // FIX: Disable mark buttons until someone buzzes
     $('correctBtn').disabled = true;
     $('incorrectBtn').disabled = true;
     renderScores();
   }
 
   $('revealQuestionBtn').onclick = () => {
-    if (questionRevealed) return;
+    if (questionRevealed || !gameReady) return;
     const q = questions[currentQ];
+    if (!q) return;
     questionRevealed = true;
-    waitingForBuzz = true;
     $('revealQuestionBtn').disabled = true;
     socket.emit('host-reveal-question', { room });
     try { $('tenseMusic').play(); } catch(e) {}
@@ -147,12 +155,13 @@
       $('questionText').style.color = 'white';
       $('questionText').style.fontStyle = 'normal';
       i++;
-      if (i >= text.length) clearInterval(revealInterval);
+      if (i >= text.length) { clearInterval(revealInterval); revealInterval = null; }
     }, 50);
 
     try {
-      const utt = new SpeechSynthesisUtterance(text);
-      speechSynthesis.speak(utt);
+      speechSynthesis.cancel();
+      currentUtterance = new SpeechSynthesisUtterance(text);
+      speechSynthesis.speak(currentUtterance);
     } catch(e) {}
   };
 
@@ -160,7 +169,7 @@
   $('incorrectBtn').onclick = () => markAnswer(false);
 
   function markAnswer(correct) {
-    if (!buzzedBy && !buzzedTeamId) return; // nothing to mark
+    if (!buzzedBy && !buzzedTeamId) return;
     const q = questions[currentQ];
     const pts = correct ? q.points : -1;
 
@@ -173,7 +182,6 @@
     socket.emit('host-mark', { room, correct, buzzedName: buzzedBy, buzzedTeamId });
 
     if (correct) {
-      // Reveal answer
       if (!answerRevealed) {
         const text = q.answer;
         let i = 0;
@@ -181,33 +189,32 @@
         revealInterval = setInterval(() => {
           $('correctAnswerDisplay').textContent = text.slice(0, i + 1);
           i++;
-          if (i >= text.length) clearInterval(revealInterval);
+          if (i >= text.length) { clearInterval(revealInterval); revealInterval = null; }
         }, 50);
         $('answerReveal').classList.remove('hidden');
         answerRevealed = true;
         try {
-          speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+          speechSynthesis.cancel();
+          currentUtterance = new SpeechSynthesisUtterance(text);
+          speechSynthesis.speak(currentUtterance);
         } catch(e) {}
       }
       try { $('correctSound').play(); } catch(e) {}
     } else {
-      // Incorrect — question goes back in the pool; nobody can buzz until Next is clicked
       try { $('incorrectSound').play(); } catch(e) {}
       $('buzzStatusBox').innerHTML = '<span class="buzz-waiting">❌ Wrong — click Next → to continue</span>';
-      // Don't restart tense music; teacher just needs to click Next
     }
 
-    // FIX: Always disable mark buttons after marking (re-enable when next buzz arrives)
     buzzedBy = null;
     buzzedTeamId = null;
     $('correctBtn').disabled = true;
     $('incorrectBtn').disabled = true;
-
     renderScores();
   }
 
   $('nextQuestionBtn').onclick = () => {
-    if (revealInterval) clearInterval(revealInterval);
+    if (revealInterval) { clearInterval(revealInterval); revealInterval = null; }
+    try { speechSynthesis.cancel(); currentUtterance = null; } catch(e) {}
     currentQ++;
     socket.emit('host-next-question', { room });
     try { $('tenseMusic').pause(); $('tenseMusic').currentTime = 0; } catch(e) {}
@@ -236,9 +243,9 @@
 
   function endGame() {
     Session.saveGame({ teams, scores, gameMode, room, questions });
-    // Tell server — triggers game-ended on students
     socket.emit('host-next-question', { room });
     try { $('tenseMusic').pause(); $('tenseMusic').currentTime = 0; } catch(e) {}
+    try { speechSynthesis.cancel(); } catch(e) {}
 
     const hostView = document.querySelector('.host-view');
     hostView.style.display = 'none';
@@ -263,9 +270,9 @@
         ${scoreboard}
       </div>
       <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;">
-        <button id="playAgainBtn" style="padding:0.75rem 1.75rem;border:3px solid white;border-radius:10px;background:#FFD93D;color:#0d0d1a;font-weight:800;font-size:1.1rem;cursor:pointer;">Play Again</button>
+        <button id="playAgainBtn"   style="padding:0.75rem 1.75rem;border:3px solid white;border-radius:10px;background:#FFD93D;color:#0d0d1a;font-weight:800;font-size:1.1rem;cursor:pointer;">Play Again</button>
         <button id="viewResultsBtn" style="padding:0.75rem 1.75rem;border:3px solid #FFD93D;border-radius:10px;background:transparent;color:#FFD93D;font-weight:800;font-size:1.1rem;cursor:pointer;">View Results</button>
-        <button id="homeBtn" style="padding:0.75rem 1.75rem;border:3px solid rgba(255,255,255,0.4);border-radius:10px;background:transparent;color:rgba(255,255,255,0.6);font-weight:800;font-size:1.1rem;cursor:pointer;">🏠 End &amp; Go Home</button>
+        <button id="homeBtn"        style="padding:0.75rem 1.75rem;border:3px solid rgba(255,255,255,0.4);border-radius:10px;background:transparent;color:rgba(255,255,255,0.6);font-weight:800;font-size:1.1rem;cursor:pointer;">🏠 End &amp; Go Home</button>
       </div>
     `;
     document.body.appendChild(endOverlay);
@@ -275,28 +282,28 @@
       hostView.style.display = '';
       currentQ = 0;
       scores = {};
-      if (gameMode === 'teams') {
-        teams.forEach(t => scores[t.id] = 0);
-      }
+      if (gameMode === 'teams') teams.forEach(t => scores[t.id] = 0);
       socket.emit('host-reset-game', { room, questions });
-      displayQuestion();
+      // displayQuestion() will be called when game-reset triggers game-started-equivalent
     };
 
-    $('viewResultsBtn').onclick = () => {
-      window.location.href = '/results';
-    };
+    $('viewResultsBtn').onclick = () => { window.location.href = '/results'; };
 
     $('homeBtn').onclick = () => {
-      // Notify students then go home
       socket.emit('host-end-session', { room });
-      Session.clearRoom();
-      Session.clearGame();
+      Session.clearRoom(); Session.clearGame();
       window.location.href = '/';
     };
   }
 
-  // Start
-  displayQuestion();
+  // Handle play-again reset — server sends game-reset, then we need to re-init
+  socket.on('game-reset', data => {
+    questions = data.questions;
+    scores = data.scores || {};
+    currentQ = 0;
+    $('totalQuestions').textContent = `/ ${questions.length}`;
+    displayQuestion();
+  });
 })();
 </script>
 </body>

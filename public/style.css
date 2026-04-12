@@ -247,3 +247,28 @@ body { font-family: var(--font-body); background: var(--ink); min-height: 100vh;
   .buzz-btn { width: 140px; height: 140px; font-size: 1.5rem; }
   .rc-code { font-size: 2rem; letter-spacing: 4px; }
 }
+
+/* ── Player chip spacing fix ─────────────────── */
+.player-chip {
+  gap: 0.6rem;
+}
+.player-chip-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+.player-chip-name {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.player-team-tag {
+  flex-shrink: 0;
+}
+.kick-btn {
+  flex-shrink: 0;
+  margin-left: 0; /* gap handles spacing now */
+}
