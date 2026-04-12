@@ -80,12 +80,13 @@
   });
 
   // Server sends the canonical shuffled question list to EVERYONE (host + students)
-  // via game-started. This is the single source of truth.
+  // via game-started. Also re-fired on host reconnect with currentQ position.
   socket.on('game-started', data => {
     questions = data.questions;
+    if (data.currentQ !== undefined) currentQ = data.currentQ;
     $('totalQuestions').textContent = `/ ${questions.length}`;
     gameReady = true;
-    console.log('[TEACHER GAME] Got shuffled questions:', questions.length);
+    console.log('[TEACHER GAME] Got questions:', questions.length, 'at Q', currentQ);
     displayQuestion();
   });
 

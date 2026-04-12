@@ -74,7 +74,19 @@ io.on('connection', (socket) => {
     console.log(`Host created/re-joined room ${room} (gameActive: ${r.gameActive})`);
     socket.emit('host-room-created', { room });
 
-    // FIX: Re-send current player list to host when they reconnect mid-game
+    // If game is already active (host navigated lobby→game), re-send the
+    // current question list so teacher-game.html can initialise properly.
+    if (r.gameActive) {
+      socket.emit('game-started', {
+        gameMode: r.gameMode,
+        teams: r.teams,
+        scores: r.scores,
+        questions: r.questions,
+        currentQ: r.currentQ,
+      });
+    }
+
+    // Re-send current player list to host when they reconnect mid-game
     Object.entries(r.players).forEach(([id, data]) => {
       socket.emit('player-joined', {
         id,
