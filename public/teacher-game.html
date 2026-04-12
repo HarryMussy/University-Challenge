@@ -10,11 +10,10 @@
 </head>
 <body style="background:#1a1a2e;">
 
-<!-- Audio elements -->
-<audio id="buzzSound" src="sounds/buzz.mp3" preload="auto"></audio>
-<audio id="correctSound" src="sounds/correct.mp3" preload="auto"></audio>
+<audio id="buzzSound"    src="sounds/buzz.mp3"      preload="auto"></audio>
+<audio id="correctSound" src="sounds/correct.mp3"   preload="auto"></audio>
 <audio id="incorrectSound" src="sounds/incorrect.mp3" preload="auto"></audio>
-<audio id="tenseMusic" src="sounds/tense.mp3" loop preload="auto"></audio>
+<audio id="tenseMusic"   src="sounds/tense.mp3"     loop preload="auto"></audio>
 
 <div class="host-view">
   <!-- Sidebar -->
@@ -43,8 +42,8 @@
     </div>
     <div class="host-controls">
       <button id="revealQuestionBtn" class="btn btn-gold">📝 Reveal Question</button>
-      <button id="correctBtn"        class="btn btn-success">✓ Correct</button>
-      <button id="incorrectBtn"      class="btn btn-danger">✗ Incorrect</button>
+      <button id="correctBtn"        class="btn btn-success" disabled>✓ Correct</button>
+      <button id="incorrectBtn"      class="btn btn-danger"  disabled>✗ Incorrect</button>
       <button id="nextQuestionBtn"   class="btn btn-primary">Next →</button>
     </div>
   </div>
@@ -64,10 +63,11 @@
   let answerRevealed = false;
   let buzzedBy = null;
   let buzzedTeamId = null;
+  let waitingForBuzz = false; // true after reveal, before someone buzzes
+  let revealInterval = null;
 
   $('totalQuestions').textContent = `/ ${questions.length}`;
 
-  // Connect socket as host (re-create for game events)
   const socket = io();
 
   socket.on('connect', () => {
@@ -76,7 +76,7 @@
   });
 
   socket.on('host-room-created', () => {
-    // Room re-created
+    console.log('[TEACHER GAME] Room ready');
   });
 
   socket.on('buzzed', data => {
@@ -86,8 +86,12 @@
     const team = teams.find(t => t.id === data.teamId);
     const teamLabel = team ? ` (${team.name})` : '';
     $('buzzStatusBox').innerHTML = `<span class="buzz-alert">🔔 ${data.name}${teamLabel} buzzed in!</span>`;
-    $('buzzSound').play();
-    $('tenseMusic').pause();
+    // Enable marking buttons now that someone has buzzed
+    $('correctBtn').disabled = false;
+    $('incorrectBtn').disabled = false;
+    try { $('buzzSound').play(); } catch(e) {}
+    try { $('tenseMusic').pause(); } catch(e) {}
+    waitingForBuzz = false;
   });
 
   socket.on('score-update', data => {
@@ -95,10 +99,9 @@
     renderScores();
   });
 
-  // ── Display question ──
+  // ── Display question (local state reset only) ──
   function displayQuestion() {
     if (currentQ >= questions.length) { endGame(); return; }
-    const q = questions[currentQ];
     $('questionNumber').textContent = `Q${currentQ + 1}`;
     $('questionText').textContent = 'Press "Reveal Question" to show the question';
     $('questionText').style.color = 'rgba(255,255,255,0.3)';
@@ -110,7 +113,11 @@
     answerRevealed = false;
     buzzedBy = null;
     buzzedTeamId = null;
+    waitingForBuzz = false;
     $('revealQuestionBtn').disabled = false;
+    // FIX: Disable mark buttons until someone buzzes
+    $('correctBtn').disabled = true;
+    $('incorrectBtn').disabled = true;
     renderScores();
   }
 
@@ -118,65 +125,84 @@
     if (questionRevealed) return;
     const q = questions[currentQ];
     questionRevealed = true;
+    waitingForBuzz = true;
     $('revealQuestionBtn').disabled = true;
     socket.emit('host-reveal-question', { room });
-    $('tenseMusic').play();
-    // Gradual reveal
+    try { $('tenseMusic').play(); } catch(e) {}
+
+    if (revealInterval) clearInterval(revealInterval);
     const text = q.text;
     let i = 0;
-    const interval = setInterval(() => {
+    revealInterval = setInterval(() => {
       $('questionText').textContent = text.slice(0, i + 1);
       $('questionText').style.color = 'white';
       $('questionText').style.fontStyle = 'normal';
       i++;
-      if (i >= text.length) clearInterval(interval);
-    }, 50); // 50ms per character
-    speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+      if (i >= text.length) clearInterval(revealInterval);
+    }, 50);
+
+    try {
+      const utt = new SpeechSynthesisUtterance(text);
+      speechSynthesis.speak(utt);
+    } catch(e) {}
   };
 
   $('correctBtn').onclick   = () => markAnswer(true);
   $('incorrectBtn').onclick = () => markAnswer(false);
 
   function markAnswer(correct) {
+    if (!buzzedBy && !buzzedTeamId) return; // nothing to mark
     const q = questions[currentQ];
     const pts = correct ? q.points : -1;
+
     if (gameMode === 'teams' && buzzedTeamId) {
       scores[buzzedTeamId] = (scores[buzzedTeamId] || 0) + pts;
     } else if (buzzedBy) {
       scores[buzzedBy] = (scores[buzzedBy] || 0) + pts;
     }
+
     socket.emit('host-mark', { room, correct, buzzedName: buzzedBy, buzzedTeamId });
-    
-    // Auto-reveal answer only if correct
-    if (correct && !answerRevealed) {
-      const text = q.answer;
-      let i = 0;
-      const interval = setInterval(() => {
-        $('correctAnswerDisplay').textContent = text.slice(0, i + 1);
-        i++;
-        if (i >= text.length) clearInterval(interval);
-      }, 50);
-      $('answerReveal').classList.remove('hidden');
-      answerRevealed = true;
-      speechSynthesis.speak(new SpeechSynthesisUtterance(text));
-    }
-    
-    buzzedBy = null; buzzedTeamId = null;
-    $('buzzStatusBox').innerHTML = '<span class="buzz-waiting">Waiting for buzz…</span>';
-    renderScores();
+
     if (correct) {
-      $('correctSound').play();
+      // Reveal answer
+      if (!answerRevealed) {
+        const text = q.answer;
+        let i = 0;
+        if (revealInterval) clearInterval(revealInterval);
+        revealInterval = setInterval(() => {
+          $('correctAnswerDisplay').textContent = text.slice(0, i + 1);
+          i++;
+          if (i >= text.length) clearInterval(revealInterval);
+        }, 50);
+        $('answerReveal').classList.remove('hidden');
+        answerRevealed = true;
+        try {
+          speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+        } catch(e) {}
+      }
+      try { $('correctSound').play(); } catch(e) {}
     } else {
-      $('incorrectSound').play();
+      // Incorrect — question goes back into the pool; reset for next buzzer
+      try { $('incorrectSound').play(); } catch(e) {}
+      $('buzzStatusBox').innerHTML = '<span class="buzz-waiting">Waiting for buzz…</span>';
+      try { $('tenseMusic').play(); } catch(e) {}
     }
+
+    // FIX: Always disable mark buttons after marking (re-enable when next buzz arrives)
+    buzzedBy = null;
+    buzzedTeamId = null;
+    $('correctBtn').disabled = true;
+    $('incorrectBtn').disabled = true;
+
+    renderScores();
   }
 
   $('nextQuestionBtn').onclick = () => {
+    if (revealInterval) clearInterval(revealInterval);
     currentQ++;
     socket.emit('host-next-question', { room });
+    try { $('tenseMusic').pause(); $('tenseMusic').currentTime = 0; } catch(e) {}
     displayQuestion();
-    $('tenseMusic').pause();
-    $('tenseMusic').currentTime = 0;
   };
 
   function renderScores() {
@@ -201,23 +227,15 @@
 
   function endGame() {
     Session.saveGame({ teams, scores, gameMode, room, questions });
-    socket.emit('host-next-question', { room }); // triggers game-ended on server
-    $('tenseMusic').pause();
-    $('tenseMusic').currentTime = 0;
-    
-    // Play victory sound immediately
-    const victorySound = new Audio('data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==');
-    try { victorySound.play().catch(() => {}); } catch(e) {}
-    
-    // Show end game screen with scoreboard
+    // Tell server — triggers game-ended on students
+    socket.emit('host-next-question', { room });
+    try { $('tenseMusic').pause(); $('tenseMusic').currentTime = 0; } catch(e) {}
+
     const hostView = document.querySelector('.host-view');
     hostView.style.display = 'none';
-    const endOverlay = document.createElement('div');
-    endOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#1a1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;z-index:1000;overflow-y:auto;padding:2rem;';
-    
-    // Render scoreboard
+
     const entries = Object.entries(scores).sort((a,b) => b[1]-a[1]);
-    const scoreboard = entries.map(([ key, pts ]) => {
+    const scoreboard = entries.map(([key, pts]) => {
       const team = teams.find(t => t.id === key);
       const name = team ? team.name : key;
       const colour = team ? team.colour : '#FFD93D';
@@ -227,37 +245,46 @@
         <span style="margin-left:auto;font-weight:800;font-size:1.4rem;color:#FFD93D;">${pts}</span>
       </div>`;
     }).join('');
-    
+
+    const endOverlay = document.createElement('div');
+    endOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#1a1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;z-index:1000;overflow-y:auto;padding:2rem;';
     endOverlay.innerHTML = `
       <h1 style="font-family:Bangers,Impact,sans-serif;font-size:3.5rem;margin-bottom:0.5rem;color:#FFD93D;">🏆 Game Over! 🏆</h1>
-      <div style="background:rgba(255,217,61,0.1);border:3px solid #FFD93D;border-radius:16px;padding:1.5rem;margin-bottom:2rem;max-width:500px;text-align:center;">
+      <div style="background:rgba(255,217,61,0.1);border:3px solid #FFD93D;border-radius:16px;padding:1.5rem;margin-bottom:2rem;max-width:500px;width:100%;text-align:center;">
         ${scoreboard}
       </div>
-      <div style="display:flex;gap:1rem;">
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;">
         <button id="playAgainBtn" style="padding:0.75rem 1.75rem;border:3px solid white;border-radius:10px;background:#FFD93D;color:#0d0d1a;font-weight:800;font-size:1.1rem;cursor:pointer;">Play Again</button>
         <button id="viewResultsBtn" style="padding:0.75rem 1.75rem;border:3px solid #FFD93D;border-radius:10px;background:transparent;color:#FFD93D;font-weight:800;font-size:1.1rem;cursor:pointer;">View Results</button>
+        <button id="homeBtn" style="padding:0.75rem 1.75rem;border:3px solid rgba(255,255,255,0.4);border-radius:10px;background:transparent;color:rgba(255,255,255,0.6);font-weight:800;font-size:1.1rem;cursor:pointer;">🏠 End &amp; Go Home</button>
       </div>
     `;
     document.body.appendChild(endOverlay);
-    
+
     $('playAgainBtn').onclick = () => {
       endOverlay.remove();
       hostView.style.display = '';
-      // Reset for new game with same questions
       currentQ = 0;
+      scores = {};
       if (gameMode === 'teams') {
         teams.forEach(t => scores[t.id] = 0);
-      } else {
-        Object.keys(scores).forEach(k => scores[k] = 0);
       }
-      console.log('[TEACHER] Requesting game reset');
       socket.emit('host-reset-game', { room, questions });
       displayQuestion();
     };
-    
+
     $('viewResultsBtn').onclick = () => {
       window.location.href = '/results';
-    };\n  }
+    };
+
+    $('homeBtn').onclick = () => {
+      // Notify students then go home
+      socket.emit('host-end-session', { room });
+      Session.clearRoom();
+      Session.clearGame();
+      window.location.href = '/';
+    };
+  }
 
   // Start
   displayQuestion();
