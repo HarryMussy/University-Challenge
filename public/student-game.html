@@ -110,16 +110,13 @@
     }
   });
 
-  // FIX: buzz-reset is now sent by server when:
-  //   a) an answer is marked incorrect (question re-enters pool)
-  //   b) next-question is called (belt-and-suspenders)
+  // buzz-reset is sent by server with next-question (belt-and-suspenders)
+  // It does NOT fire after an incorrect answer anymore — students wait for Next
   socket.on('buzz-reset', () => {
-    // Only re-enable if we haven't already been told about a new question
-    // (next-question event handles that separately)
-    $('buzzButton').disabled = false;
     $('buzzedIndicator').classList.add('hidden');
     $('resultMessage').classList.add('hidden');
     myBuzzed = false;
+    // Note: button stays disabled until question-revealed fires
   });
 
   socket.on('answer-result', data => {
@@ -129,13 +126,9 @@
       ? `✓ Correct! +${data.points} pts`
       : `✗ Incorrect! ${data.points < 0 ? data.points : '-' + data.points} pts`;
     el.classList.add(data.correct ? 'correct' : 'incorrect');
-
-    if (data.correct) {
-      // Correct — lock buzz (question is done)
-      $('buzzButton').disabled = true;
-      $('buzzedIndicator').classList.add('hidden');
-    }
-    // If incorrect, buzz-reset event will re-enable the button
+    // Buzz button stays disabled either way — re-enabled only on question-revealed
+    $('buzzButton').disabled = true;
+    $('buzzedIndicator').classList.add('hidden');
   });
 
   socket.on('score-update', data => {

@@ -79,14 +79,23 @@
     console.log('[TEACHER GAME] Room ready');
   });
 
+  // FIX: server sends back the shuffled question order — replace local array
+  socket.on('questions-shuffled', data => {
+    questions = data.questions;
+    console.log('[TEACHER GAME] Questions shuffled, count:', questions.length);
+    // Refresh the total count display
+    $('totalQuestions').textContent = `/ ${questions.length}`;
+  });
+
   socket.on('buzzed', data => {
-    if (buzzedBy) return; // ignore subsequent buzzes
+    if (buzzedBy) return;
     buzzedBy = data.name;
     buzzedTeamId = data.teamId;
     const team = teams.find(t => t.id === data.teamId);
     const teamLabel = team ? ` (${team.name})` : '';
     $('buzzStatusBox').innerHTML = `<span class="buzz-alert">🔔 ${data.name}${teamLabel} buzzed in!</span>`;
-    // Enable marking buttons now that someone has buzzed
+    // FIX: Stop the reveal animation on the teacher's screen when someone buzzes
+    if (revealInterval) { clearInterval(revealInterval); revealInterval = null; }
     $('correctBtn').disabled = false;
     $('incorrectBtn').disabled = false;
     try { $('buzzSound').play(); } catch(e) {}
@@ -182,10 +191,10 @@
       }
       try { $('correctSound').play(); } catch(e) {}
     } else {
-      // Incorrect — question goes back into the pool; reset for next buzzer
+      // Incorrect — question goes back in the pool; nobody can buzz until Next is clicked
       try { $('incorrectSound').play(); } catch(e) {}
-      $('buzzStatusBox').innerHTML = '<span class="buzz-waiting">Waiting for buzz…</span>';
-      try { $('tenseMusic').play(); } catch(e) {}
+      $('buzzStatusBox').innerHTML = '<span class="buzz-waiting">❌ Wrong — click Next → to continue</span>';
+      // Don't restart tense music; teacher just needs to click Next
     }
 
     // FIX: Always disable mark buttons after marking (re-enable when next buzz arrives)

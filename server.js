@@ -164,6 +164,8 @@ io.on('connection', (socket) => {
     r.currentQ = 0;
     r.buzzed = false;
     r.questions = shuffle(r.questions);
+    // FIX: send shuffled questions back to host so their local array stays in sync
+    socket.emit('questions-shuffled', { questions: r.questions });
     io.to(room).emit('game-started', {
       gameMode: r.gameMode,
       teams: r.teams,
@@ -213,19 +215,13 @@ io.on('connection', (socket) => {
     }
 
     if (!correct) {
-      // Re-add question for later and reset buzz so others can answer
+      // Re-add question for later; keep buzz locked — teacher must click Next
       r.questions.push(q);
-      // FIX: Reset buzz so students can buzz again on this question
-      r.buzzed = false;
     }
 
     io.to(room).emit('answer-result', { correct, points: pts, buzzedBy: buzzedName });
     io.to(room).emit('score-update', { scores: r.scores });
-
-    // FIX: If incorrect, send buzz-reset so students' buttons re-enable
-    if (!correct) {
-      io.to(room).emit('buzz-reset');
-    }
+    // No buzz-reset here — students stay locked until host-next-question
   });
 
   // HOST next question
@@ -274,6 +270,8 @@ io.on('connection', (socket) => {
       });
     }
     console.log(`[GAME RESET] Room ${room}`);
+    // FIX: send reshuffled questions back to host
+    socket.emit('questions-shuffled', { questions: r.questions });
     io.to(room).emit('game-reset', {
       gameMode: r.gameMode,
       teams: r.teams,
