@@ -31,6 +31,7 @@ app.get('/student-lobby', (req, res) => res.sendFile(path.join(__dirname, 'publi
 app.get('/teacher-lobby', (req, res) => res.sendFile(path.join(__dirname, 'public', 'teacher-lobby.html')));
 app.get('/teacher-game', (req, res) => res.sendFile(path.join(__dirname, 'public', 'teacher-game.html')));
 app.get('/student-game', (req, res) => res.sendFile(path.join(__dirname, 'public', 'student-game.html')));
+app.get('/how-to-play', (req, res) => res.sendFile(path.join(__dirname, 'public', 'how-to-play.html')));
 app.get('/results', (req, res) => res.sendFile(path.join(__dirname, 'public', 'results.html')));
 
 // ── Room state store ──────────────────────────────────────────────────────────
@@ -130,10 +131,19 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Remove stale entries for this player name (handles page refreshes / reconnects)
+    // Remove stale entries for this player name (handles page refreshes / mobile reconnects).
+    // Emit player-left for the old socket ID FIRST so the host removes the ghost
+    // before seeing the new player-joined, preventing duplicates in the lobby list.
     for (let sid in r.players) {
       if (r.players[sid].name === name) {
         delete r.players[sid];
+        if (r.hostSocketId && sid !== socket.id) {
+          io.to(r.hostSocketId).emit('player-left', {
+            id: sid,
+            name,
+            playerCount: Object.keys(r.players).length
+          });
+        }
         break;
       }
     }
@@ -303,8 +313,14 @@ io.on('connection', (socket) => {
   socket.on('host-kick-player', ({ room, playerId }) => {
     const r = rooms[room];
     if (!r) return;
-    const playerName = r.players[playerId]?.name || 'Unknown';
+    const playerData = r.players[playerId];
+    const playerName = playerData?.name || 'Unknown';
+    // Remove from players
     delete r.players[playerId];
+    // Remove from scores so kicked player doesn't appear on leaderboard
+    if (r.gameMode === 'solo') {
+      delete r.scores[playerName];
+    }
     io.to(r.hostSocketId).emit('player-left', {
       id: playerId,
       name: playerName,

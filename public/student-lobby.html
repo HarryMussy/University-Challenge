@@ -1,175 +1,175 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lobby — University Challenge</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="preload" href="style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lobby — University Challenge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="preload" href="style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
 </head>
 <body>
-<div class="page page-dark" id="lobbyPage">
+    <div class="page page-dark" id="lobbyPage">
 
-  <!-- TEAM SELECTION (shown for teams mode) -->
-  <div id="teamSelectView" class="panel panel-wide hidden">
-    <div class="panel-header">
-      <h1>Pick Your Team</h1>
-      <p class="step-hint">Choose which team you're joining, <strong id="playerNameDisplay"></strong></p>
+        <!-- TEAM SELECTION (shown for teams mode) -->
+        <div id="teamSelectView" class="panel panel-wide hidden">
+            <div class="panel-header">
+                <h1>Pick Your Team</h1>
+                <p class="step-hint">Choose which team you're joining, <strong id="playerNameDisplay"></strong></p>
+            </div>
+            <div id="teamsList" class="teams-grid"></div>
+            <div id="waitingForHost" class="waiting-host hidden">
+                <div class="pulse-dot"></div>
+                <span>Waiting for the host to start the game…</span>
+            </div>
+        </div>
+
+        <!-- SOLO WAITING -->
+        <div id="soloWaitView" class="panel hidden">
+            <div class="panel-header"><h1>You're In!</h1></div>
+            <p class="step-hint">Joined as <strong id="soloNameDisplay"></strong></p>
+            <div class="waiting-anim">
+                <div class="pulse-dot large"></div>
+                <p>Waiting for the host to start…</p>
+            </div>
+        </div>
+
+        <!-- Loading (before session loads) -->
+        <div id="loadingView" class="panel">
+            <div class="waiting-anim">
+                <div class="pulse-dot large"></div>
+                <p>Connecting…</p>
+            </div>
+        </div>
+
     </div>
-    <div id="teamsList" class="teams-grid"></div>
-    <div id="waitingForHost" class="waiting-host hidden">
-      <div class="pulse-dot"></div>
-      <span>Waiting for the host to start the game…</span>
-    </div>
-  </div>
 
-  <!-- SOLO WAITING -->
-  <div id="soloWaitView" class="panel hidden">
-    <div class="panel-header"><h1>You're In!</h1></div>
-    <p class="step-hint">Joined as <strong id="soloNameDisplay"></strong></p>
-    <div class="waiting-anim">
-      <div class="pulse-dot large"></div>
-      <p>Waiting for the host to start…</p>
-    </div>
-  </div>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="shared.js"></script>
+    <script>
+        (function () {
+            const student = Session.getStudent();
+            if (!student) { window.location.href = '/join'; return; }
 
-  <!-- Loading (before session loads) -->
-  <div id="loadingView" class="panel">
-    <div class="waiting-anim">
-      <div class="pulse-dot large"></div>
-      <p>Connecting…</p>
-    </div>
-  </div>
+            const { name, room } = student;
+            let myTeamId = student.myTeamId || null;
+            let socket = null;
 
-</div>
+            // Connect socket
+            socket = io();
 
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-<script src="shared.js"></script>
-<script>
-(function() {
-  const student = Session.getStudent();
-  if (!student) { window.location.href = '/join'; return; }
+            socket.on('connect', () => {
+                console.log('[STUDENT LOBBY] connected, socket:', socket.id);
+                socket.emit('student-join', { room, name });
+            });
 
-  const { name, room, gameMode, teams } = student;
-  let myTeamId = null;
-  let socket = null;
+            // room-info is the authoritative source — always use gameMode from server
+            socket.on('room-info', data => {
+                Session.saveStudent({ ...student, teams: data.teams, gameMode: data.gameMode });
+                showCorrectView(data.gameMode, data.teams);
+            });
 
-  // Connect socket
-  socket = io();
+            socket.on('mode-changed', data => {
+                myTeamId = null;
+                Session.saveStudent({ ...student, gameMode: data.gameMode, teams: data.teams || [] });
+                showCorrectView(data.gameMode, data.teams || []);
+            });
 
-  socket.on('connect', () => {
-    console.log('[STUDENT LOBBY] connected, socket:', socket.id);
-    // Re-join the room (new socket connection)
-    socket.emit('student-join', { room, name });
-  });
+            socket.on('game-started', data => {
+                Session.saveGame({
+                    room,
+                    name,
+                    myTeamId,
+                    gameMode: data.gameMode,
+                    teams: data.teams,
+                    scores: data.scores,
+                });
+                window.location.href = '/student-game';
+            });
 
-  socket.on('room-info', data => {
-    // Update session with latest team info
-    Session.saveStudent({ ...student, teams: data.teams, gameMode: data.gameMode });
-    showCorrectView(data.gameMode, data.teams);
-  });
+            socket.on('host-disconnected', () => {
+                alert('The host has disconnected. Returning to home.');
+                window.location.href = '/';
+            });
 
-  socket.on('mode-changed', data => {
-    // Teacher switched game mode - clear team selection if switching to solo
-    myTeamId = null;
-    Session.saveStudent({ ...student, gameMode: data.gameMode, teams: data.teams || [] });
-    showCorrectView(data.gameMode, data.teams || []);
-  });
+            socket.on('kicked', () => {
+                alert('You have been kicked from the room.');
+                Session.clearStudent();
+                window.location.href = '/join';
+            });
 
-  socket.on('game-started', data => {
-    // Save full game state
-    Session.saveGame({
-      room,
-      name,
-      myTeamId,
-      gameMode: data.gameMode,
-      teams: data.teams,
-      scores: data.scores,
-    });
-    window.location.href = '/student-game';
-  });
+            socket.on('lobby-closed', () => {
+                alert('The teacher has left the lobby.');
+                Session.clearStudent();
+                window.location.href = '/join';
+            });
 
-  socket.on('host-disconnected', () => {
-    alert('The host has disconnected. Returning to home.');
-    window.location.href = '/';
-  });
+            socket.on('join-error', data => {
+                alert(data.message || 'Could not rejoin room.');
+                Session.clearStudent();
+                window.location.href = '/join';
+            });
 
-  socket.on('kicked', () => {
-    alert('You have been kicked from the room.');
-    Session.clearStudent();
-    window.location.href = '/join';
-  });
+            // ── Parallax background ──
+            const lobbyPage = $('lobbyPage');
+            document.addEventListener('mousemove', e => {
+                const offsetX = (e.clientX - window.innerWidth / 2) * 0.02;
+                const offsetY = (e.clientY - window.innerHeight / 2) * 0.02;
+                lobbyPage.style.backgroundPosition = `calc(50% + ${offsetX}px) calc(50% + ${offsetY}px)`;
+            }, { passive: true });
 
-  socket.on('lobby-closed', () => {
-    alert('The teacher has left the lobby.');
-    Session.clearStudent();
-    window.location.href = '/join';
-  });
+            function showCorrectView(mode, teamList) {
+                $('loadingView').classList.add('hidden');
+                $('teamSelectView').classList.add('hidden');
+                $('soloWaitView').classList.add('hidden');
 
-  // ── Parallax background dots ──
-  const lobbyPage = $('lobbyPage');
-  let mouseX = 0, mouseY = 0;
-  
-  document.addEventListener('mousemove', e => {
-    mouseX = e.clientX;
-    mouseY = e.clientY;
-    
-    // Calculate offset from center
-    const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2;
-    const offsetX = (mouseX - centerX) * 0.02; // 2% parallax intensity
-    const offsetY = (mouseY - centerY) * 0.02;
-    
-    // Apply transform to background
-    lobbyPage.style.backgroundPosition = `calc(50% + ${offsetX}px) calc(50% + ${offsetY}px)`;
-  }, { passive: true });
+                // Solo mode OR no teams configured: always show solo wait view
+                if (mode === 'teams' && teamList && teamList.length > 0) {
+                    $('playerNameDisplay').textContent = name;
+                    renderTeams(teamList);
+                    $('teamSelectView').classList.remove('hidden');
+                    // If player already chose a team (e.g. after reconnect), show waiting state
+                    if (myTeamId) {
+                        $$('.team-select-btn').forEach(btn => {
+                            if (btn.dataset.teamId === myTeamId) btn.classList.add('chosen');
+                        });
+                        $('waitingForHost').classList.remove('hidden');
+                    }
+                } else {
+                    $('soloNameDisplay').textContent = name;
+                    $('soloWaitView').classList.remove('hidden');
+                }
+            }
 
-  // Show correct view
-  function showCorrectView(mode, teamList) {
-    // Hide all views first
-    $('loadingView').classList.add('hidden');
-    $('teamSelectView').classList.add('hidden');
-    $('soloWaitView').classList.add('hidden');
-    
-    // Show the correct view based on mode
-    if (mode === 'teams' && teamList && teamList.length > 0) {
-      $('playerNameDisplay').textContent = name;
-      renderTeams(teamList);
-      $('teamSelectView').classList.remove('hidden');
-    } else {
-      $('soloNameDisplay').textContent = name;
-      $('soloWaitView').classList.remove('hidden');
-    }
-  }
+            function renderTeams(teamList) {
+                const grid = $('teamsList');
+                grid.innerHTML = '';
+                teamList.forEach(team => {
+                    const btn = document.createElement('button');
+                    btn.className = 'team-select-btn';
+                    btn.dataset.teamId = team.id;
+                    btn.innerHTML = `
+            <span class="tsb-color" style="background:${team.colour}"></span>
+            <span class="tsb-name">${team.name}</span>
+          `;
+                    btn.onclick = () => selectTeam(team, btn);
+                    grid.appendChild(btn);
+                });
+            }
 
-  function renderTeams(teamList) {
-    const grid = $('teamsList'); grid.innerHTML = '';
-    teamList.forEach(team => {
-      const btn = document.createElement('button');
-      btn.className = 'team-select-btn';
-      btn.innerHTML = `
-        <span class="tsb-color" style="background:${team.colour}"></span>
-        <span class="tsb-name">${team.name}</span>
-      `;
-      btn.onclick = () => selectTeam(team, btn);
-      grid.appendChild(btn);
-    });
-  }
+            function selectTeam(team, btn) {
+                myTeamId = team.id;
+                $$('.team-select-btn').forEach(b => b.classList.remove('chosen'));
+                btn.classList.add('chosen');
+                socket.emit('team-select', { room, name, teamId: team.id });
+                Session.saveStudent({ ...student, myTeamId: team.id });
+                setTimeout(() => $('waitingForHost').classList.remove('hidden'), 300);
+            }
 
-  function selectTeam(team, btn) {
-    myTeamId = team.id;
-    $$('.team-select-btn').forEach(b => b.classList.remove('chosen'));
-    btn.classList.add('chosen');
-    socket.emit('team-select', { room, name, teamId: team.id });
-    // Update session
-    Session.saveStudent({ ...student, myTeamId: team.id });
-    setTimeout(() => $('waitingForHost').classList.remove('hidden'), 300);
-  }
-
-  // Initial view based on stored session data
-  showCorrectView(gameMode, teams);
-})();
-</script>
+            // Initial view — show loading until room-info arrives from server
+            // (don't trust stale session gameMode — server is authoritative)
+            $('loadingView').classList.remove('hidden');
+        })();
+    </script>
 </body>
 </html>

@@ -1,311 +1,311 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Game — University Challenge</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game — University Challenge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body style="background:#1a1a2e;">
 
-<audio id="buzzSound"      src="sounds/buzz.mp3"      preload="auto"></audio>
-<audio id="correctSound"   src="sounds/correct.mp3"   preload="auto"></audio>
-<audio id="incorrectSound" src="sounds/incorrect.mp3" preload="auto"></audio>
-<audio id="tenseMusic"     src="sounds/tense.mp3"     loop preload="auto"></audio>
+    <audio id="buzzSound" src="sounds/buzz.mp3" preload="auto"></audio>
+    <audio id="correctSound" src="sounds/correct.mp3" preload="auto"></audio>
+    <audio id="incorrectSound" src="sounds/incorrect.mp3" preload="auto"></audio>
+    <audio id="tenseMusic" src="sounds/tense.mp3" loop preload="auto"></audio>
 
-<div class="host-view">
-  <div class="host-sidebar">
-    <div class="host-q-meta">
-      <span id="questionNumber" class="q-num-badge">Q1</span>
-      <span id="totalQuestions" style="color:rgba(255,255,255,0.4);font-size:0.85rem;font-weight:600;"></span>
+    <div class="host-view">
+        <div class="host-sidebar">
+            <div class="host-q-meta">
+                <span id="questionNumber" class="q-num-badge">Q1</span>
+                <span id="totalQuestions" style="color:rgba(255,255,255,0.4);font-size:0.85rem;font-weight:600;"></span>
+            </div>
+            <div>
+                <h3 class="sb-title">Scoreboard</h3>
+                <div id="scoresList" class="scores-list"></div>
+            </div>
+            <div id="buzzStatusBox" class="host-buzz-status">
+                <span class="buzz-waiting">Waiting for buzz…</span>
+            </div>
+        </div>
+
+        <div class="host-main">
+            <p id="questionText" class="host-question-text" style="color:rgba(255,255,255,0.3);font-style:italic;">
+                Waiting for game to start…
+            </p>
+            <div id="answerReveal" class="host-answer-reveal hidden">
+                <span class="ar-label">Correct Answer</span>
+                <span id="correctAnswerDisplay" class="ar-answer"></span>
+            </div>
+            <div class="host-controls">
+                <button id="revealQuestionBtn" class="btn btn-gold" disabled>📝 Reveal Question</button>
+                <button id="correctBtn" class="btn btn-success" disabled>✓ Correct</button>
+                <button id="incorrectBtn" class="btn btn-danger" disabled>✗ Incorrect</button>
+                <button id="nextQuestionBtn" class="btn btn-primary">Next →</button>
+            </div>
+        </div>
     </div>
-    <div>
-      <h3 class="sb-title">Scoreboard</h3>
-      <div id="scoresList" class="scores-list"></div>
-    </div>
-    <div id="buzzStatusBox" class="host-buzz-status">
-      <span class="buzz-waiting">Waiting for buzz…</span>
-    </div>
-  </div>
 
-  <div class="host-main">
-    <p id="questionText" class="host-question-text" style="color:rgba(255,255,255,0.3);font-style:italic;">
-      Waiting for game to start…
-    </p>
-    <div id="answerReveal" class="host-answer-reveal hidden">
-      <span class="ar-label">Correct Answer</span>
-      <span id="correctAnswerDisplay" class="ar-answer"></span>
-    </div>
-    <div class="host-controls">
-      <button id="revealQuestionBtn" class="btn btn-gold" disabled>📝 Reveal Question</button>
-      <button id="correctBtn"        class="btn btn-success" disabled>✓ Correct</button>
-      <button id="incorrectBtn"      class="btn btn-danger"  disabled>✗ Incorrect</button>
-      <button id="nextQuestionBtn"   class="btn btn-primary">Next →</button>
-    </div>
-  </div>
-</div>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="shared.js"></script>
+    <script>
+        (function () {
+            const roomData = Session.getRoom();
+            if (!roomData) { window.location.href = '/teacher-lobby'; return; }
 
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-<script src="shared.js"></script>
-<script>
-(function() {
-  const roomData = Session.getRoom();
-  if (!roomData) { window.location.href = '/teacher-lobby'; return; }
+            const { room, teams, gameMode } = roomData;
+            let questions = roomData.questions || [];
+            let scores = roomData.scores || {};
+            let currentQ = 0;
+            let questionRevealed = false;
+            let answerRevealed = false;
+            let buzzedBy = null;
+            let buzzedTeamId = null;
+            let revealInterval = null;
+            let currentUtterance = null;
+            let gameReady = false;
 
-  const { room, teams, gameMode } = roomData;
-  let questions = roomData.questions || [];
-  let scores = roomData.scores || {};
-  let currentQ = 0;
-  let questionRevealed = false;
-  let answerRevealed = false;
-  let buzzedBy = null;
-  let buzzedTeamId = null;
-  let revealInterval = null;
-  let currentUtterance = null;
-  let gameReady = false;
+            $('totalQuestions').textContent = `/ ${questions.length}`;
 
-  $('totalQuestions').textContent = `/ ${questions.length}`;
+            const socket = io();
 
-  const socket = io();
+            socket.on('connect', () => {
+                console.log('[TEACHER GAME] connected:', socket.id);
+                socket.emit('host-create', { room, teams, gameMode, questions });
+            });
 
-  socket.on('connect', () => {
-    console.log('[TEACHER GAME] connected:', socket.id);
-    socket.emit('host-create', { room, teams, gameMode, questions });
-  });
+            socket.on('host-room-created', () => {
+                console.log('[TEACHER GAME] Room ready');
+            });
 
-  socket.on('host-room-created', () => {
-    console.log('[TEACHER GAME] Room ready');
-  });
+            // Server sends the canonical shuffled question list to EVERYONE (host + students)
+            // via game-started. Also re-fired on host reconnect with currentQ position.
+            socket.on('game-started', data => {
+                questions = data.questions;
+                if (data.currentQ !== undefined) currentQ = data.currentQ;
+                $('totalQuestions').textContent = `/ ${questions.length}`;
+                gameReady = true;
+                console.log('[TEACHER GAME] Got questions:', questions.length, 'at Q', currentQ);
+                displayQuestion();
+            });
 
-  // Server sends the canonical shuffled question list to EVERYONE (host + students)
-  // via game-started. Also re-fired on host reconnect with currentQ position.
-  socket.on('game-started', data => {
-    questions = data.questions;
-    if (data.currentQ !== undefined) currentQ = data.currentQ;
-    $('totalQuestions').textContent = `/ ${questions.length}`;
-    gameReady = true;
-    console.log('[TEACHER GAME] Got questions:', questions.length, 'at Q', currentQ);
-    displayQuestion();
-  });
+            // When a question is re-queued after wrong answer, server sends updated order
+            socket.on('question-order-updated', data => {
+                questions = data.questions;
+                $('totalQuestions').textContent = `/ ${questions.length}`;
+                console.log('[TEACHER GAME] Question order updated, total:', questions.length);
+            });
 
-  // When a question is re-queued after wrong answer, server sends updated order
-  socket.on('question-order-updated', data => {
-    questions = data.questions;
-    $('totalQuestions').textContent = `/ ${questions.length}`;
-    console.log('[TEACHER GAME] Question order updated, total:', questions.length);
-  });
+            socket.on('buzzed', data => {
+                if (buzzedBy) return;
+                buzzedBy = data.name;
+                buzzedTeamId = data.teamId;
+                const team = teams.find(t => t.id === data.teamId);
+                const teamLabel = team ? ` (${team.name})` : '';
+                $('buzzStatusBox').innerHTML = `<span class="buzz-alert">🔔 ${data.name}${teamLabel} buzzed in!</span>`;
+                // Stop text reveal
+                if (revealInterval) { clearInterval(revealInterval); revealInterval = null; }
+                // Stop speech
+                try { speechSynthesis.cancel(); currentUtterance = null; } catch (e) { }
+                $('correctBtn').disabled = false;
+                $('incorrectBtn').disabled = false;
+                try { $('buzzSound').play(); } catch (e) { }
+                try { $('tenseMusic').pause(); } catch (e) { }
+            });
 
-  socket.on('buzzed', data => {
-    if (buzzedBy) return;
-    buzzedBy = data.name;
-    buzzedTeamId = data.teamId;
-    const team = teams.find(t => t.id === data.teamId);
-    const teamLabel = team ? ` (${team.name})` : '';
-    $('buzzStatusBox').innerHTML = `<span class="buzz-alert">🔔 ${data.name}${teamLabel} buzzed in!</span>`;
-    // Stop text reveal
-    if (revealInterval) { clearInterval(revealInterval); revealInterval = null; }
-    // Stop speech
-    try { speechSynthesis.cancel(); currentUtterance = null; } catch(e) {}
-    $('correctBtn').disabled = false;
-    $('incorrectBtn').disabled = false;
-    try { $('buzzSound').play(); } catch(e) {}
-    try { $('tenseMusic').pause(); } catch(e) {}
-  });
+            socket.on('score-update', data => {
+                scores = data.scores;
+                renderScores();
+            });
 
-  socket.on('score-update', data => {
-    scores = data.scores;
-    renderScores();
-  });
+            function displayQuestion() {
+                if (!gameReady) return;
+                if (currentQ >= questions.length) { endGame(); return; }
+                $('questionNumber').textContent = `Q${currentQ + 1}`;
+                $('questionText').textContent = 'Press "Reveal Question" to show the question';
+                $('questionText').style.color = 'rgba(255,255,255,0.3)';
+                $('questionText').style.fontStyle = 'italic';
+                $('answerReveal').classList.add('hidden');
+                $('correctAnswerDisplay').textContent = '';
+                $('buzzStatusBox').innerHTML = '<span class="buzz-waiting">Waiting for buzz…</span>';
+                questionRevealed = false;
+                answerRevealed = false;
+                buzzedBy = null;
+                buzzedTeamId = null;
+                $('revealQuestionBtn').disabled = false;
+                $('correctBtn').disabled = true;
+                $('incorrectBtn').disabled = true;
+                renderScores();
+            }
 
-  function displayQuestion() {
-    if (!gameReady) return;
-    if (currentQ >= questions.length) { endGame(); return; }
-    $('questionNumber').textContent = `Q${currentQ + 1}`;
-    $('questionText').textContent = 'Press "Reveal Question" to show the question';
-    $('questionText').style.color = 'rgba(255,255,255,0.3)';
-    $('questionText').style.fontStyle = 'italic';
-    $('answerReveal').classList.add('hidden');
-    $('correctAnswerDisplay').textContent = '';
-    $('buzzStatusBox').innerHTML = '<span class="buzz-waiting">Waiting for buzz…</span>';
-    questionRevealed = false;
-    answerRevealed = false;
-    buzzedBy = null;
-    buzzedTeamId = null;
-    $('revealQuestionBtn').disabled = false;
-    $('correctBtn').disabled = true;
-    $('incorrectBtn').disabled = true;
-    renderScores();
-  }
+            $('revealQuestionBtn').onclick = () => {
+                if (questionRevealed || !gameReady) return;
+                const q = questions[currentQ];
+                if (!q) return;
+                questionRevealed = true;
+                $('revealQuestionBtn').disabled = true;
+                socket.emit('host-reveal-question', { room });
+                try { $('tenseMusic').play(); } catch (e) { }
 
-  $('revealQuestionBtn').onclick = () => {
-    if (questionRevealed || !gameReady) return;
-    const q = questions[currentQ];
-    if (!q) return;
-    questionRevealed = true;
-    $('revealQuestionBtn').disabled = true;
-    socket.emit('host-reveal-question', { room });
-    try { $('tenseMusic').play(); } catch(e) {}
+                if (revealInterval) clearInterval(revealInterval);
+                const text = q.text;
+                let i = 0;
+                revealInterval = setInterval(() => {
+                    $('questionText').textContent = text.slice(0, i + 1);
+                    $('questionText').style.color = 'white';
+                    $('questionText').style.fontStyle = 'normal';
+                    i++;
+                    if (i >= text.length) { clearInterval(revealInterval); revealInterval = null; }
+                }, 50);
 
-    if (revealInterval) clearInterval(revealInterval);
-    const text = q.text;
-    let i = 0;
-    revealInterval = setInterval(() => {
-      $('questionText').textContent = text.slice(0, i + 1);
-      $('questionText').style.color = 'white';
-      $('questionText').style.fontStyle = 'normal';
-      i++;
-      if (i >= text.length) { clearInterval(revealInterval); revealInterval = null; }
-    }, 50);
+                try {
+                    speechSynthesis.cancel();
+                    currentUtterance = new SpeechSynthesisUtterance(text);
+                    speechSynthesis.speak(currentUtterance);
+                } catch (e) { }
+            };
 
-    try {
-      speechSynthesis.cancel();
-      currentUtterance = new SpeechSynthesisUtterance(text);
-      speechSynthesis.speak(currentUtterance);
-    } catch(e) {}
-  };
+            $('correctBtn').onclick = () => markAnswer(true);
+            $('incorrectBtn').onclick = () => markAnswer(false);
 
-  $('correctBtn').onclick   = () => markAnswer(true);
-  $('incorrectBtn').onclick = () => markAnswer(false);
+            function markAnswer(correct) {
+                if (!buzzedBy && !buzzedTeamId) return;
+                const q = questions[currentQ];
+                const pts = correct ? q.points : -1;
 
-  function markAnswer(correct) {
-    if (!buzzedBy && !buzzedTeamId) return;
-    const q = questions[currentQ];
-    const pts = correct ? q.points : -1;
+                if (gameMode === 'teams' && buzzedTeamId) {
+                    scores[buzzedTeamId] = (scores[buzzedTeamId] || 0) + pts;
+                } else if (buzzedBy) {
+                    scores[buzzedBy] = (scores[buzzedBy] || 0) + pts;
+                }
 
-    if (gameMode === 'teams' && buzzedTeamId) {
-      scores[buzzedTeamId] = (scores[buzzedTeamId] || 0) + pts;
-    } else if (buzzedBy) {
-      scores[buzzedBy] = (scores[buzzedBy] || 0) + pts;
-    }
+                socket.emit('host-mark', { room, correct, buzzedName: buzzedBy, buzzedTeamId });
 
-    socket.emit('host-mark', { room, correct, buzzedName: buzzedBy, buzzedTeamId });
+                if (correct) {
+                    if (!answerRevealed) {
+                        const text = q.answer;
+                        let i = 0;
+                        if (revealInterval) clearInterval(revealInterval);
+                        revealInterval = setInterval(() => {
+                            $('correctAnswerDisplay').textContent = text.slice(0, i + 1);
+                            i++;
+                            if (i >= text.length) { clearInterval(revealInterval); revealInterval = null; }
+                        }, 50);
+                        $('answerReveal').classList.remove('hidden');
+                        answerRevealed = true;
+                        try {
+                            speechSynthesis.cancel();
+                            currentUtterance = new SpeechSynthesisUtterance(text);
+                            speechSynthesis.speak(currentUtterance);
+                        } catch (e) { }
+                    }
+                    try { $('correctSound').play(); } catch (e) { }
+                } else {
+                    try { $('incorrectSound').play(); } catch (e) { }
+                    $('buzzStatusBox').innerHTML = '<span class="buzz-waiting">❌ Wrong — click Next → to continue</span>';
+                }
 
-    if (correct) {
-      if (!answerRevealed) {
-        const text = q.answer;
-        let i = 0;
-        if (revealInterval) clearInterval(revealInterval);
-        revealInterval = setInterval(() => {
-          $('correctAnswerDisplay').textContent = text.slice(0, i + 1);
-          i++;
-          if (i >= text.length) { clearInterval(revealInterval); revealInterval = null; }
-        }, 50);
-        $('answerReveal').classList.remove('hidden');
-        answerRevealed = true;
-        try {
-          speechSynthesis.cancel();
-          currentUtterance = new SpeechSynthesisUtterance(text);
-          speechSynthesis.speak(currentUtterance);
-        } catch(e) {}
-      }
-      try { $('correctSound').play(); } catch(e) {}
-    } else {
-      try { $('incorrectSound').play(); } catch(e) {}
-      $('buzzStatusBox').innerHTML = '<span class="buzz-waiting">❌ Wrong — click Next → to continue</span>';
-    }
+                buzzedBy = null;
+                buzzedTeamId = null;
+                $('correctBtn').disabled = true;
+                $('incorrectBtn').disabled = true;
+                renderScores();
+            }
 
-    buzzedBy = null;
-    buzzedTeamId = null;
-    $('correctBtn').disabled = true;
-    $('incorrectBtn').disabled = true;
-    renderScores();
-  }
+            $('nextQuestionBtn').onclick = () => {
+                if (revealInterval) { clearInterval(revealInterval); revealInterval = null; }
+                try { speechSynthesis.cancel(); currentUtterance = null; } catch (e) { }
+                currentQ++;
+                socket.emit('host-next-question', { room });
+                try { $('tenseMusic').pause(); $('tenseMusic').currentTime = 0; } catch (e) { }
+                displayQuestion();
+            };
 
-  $('nextQuestionBtn').onclick = () => {
-    if (revealInterval) { clearInterval(revealInterval); revealInterval = null; }
-    try { speechSynthesis.cancel(); currentUtterance = null; } catch(e) {}
-    currentQ++;
-    socket.emit('host-next-question', { room });
-    try { $('tenseMusic').pause(); $('tenseMusic').currentTime = 0; } catch(e) {}
-    displayQuestion();
-  };
+            function renderScores() {
+                const el = $('scoresList'); el.innerHTML = '';
+                const entries = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+                const top = entries[0]?.[1];
+                entries.forEach(([id, pts]) => {
+                    const team = teams.find(t => t.id === id);
+                    const name = team ? team.name : id;
+                    const colour = team ? team.colour : '#FFD93D';
+                    const row = document.createElement('div');
+                    row.className = 'score-row' + (pts === top && pts > 0 ? ' leading' : '');
+                    row.innerHTML = `
+            <span style="display:flex;align-items:center;gap:0.5rem;">
+              <span style="width:10px;height:10px;border-radius:50%;background:${colour};display:inline-block;border:1.5px solid #fff;"></span>
+              ${name}
+            </span>
+            <span class="score-pts">${pts}</span>`;
+                    el.appendChild(row);
+                });
+            }
 
-  function renderScores() {
-    const el = $('scoresList'); el.innerHTML = '';
-    const entries = Object.entries(scores).sort((a,b) => b[1]-a[1]);
-    const top = entries[0]?.[1];
-    entries.forEach(([id, pts]) => {
-      const team = teams.find(t => t.id === id);
-      const name = team ? team.name : id;
-      const colour = team ? team.colour : '#FFD93D';
-      const row = document.createElement('div');
-      row.className = 'score-row' + (pts === top && pts > 0 ? ' leading' : '');
-      row.innerHTML = `
-        <span style="display:flex;align-items:center;gap:0.5rem;">
-          <span style="width:10px;height:10px;border-radius:50%;background:${colour};display:inline-block;border:1.5px solid #fff;"></span>
-          ${name}
-        </span>
-        <span class="score-pts">${pts}</span>`;
-      el.appendChild(row);
-    });
-  }
+            function endGame() {
+                Session.saveGame({ teams, scores, gameMode, room, questions });
+                socket.emit('host-next-question', { room });
+                try { $('tenseMusic').pause(); $('tenseMusic').currentTime = 0; } catch (e) { }
+                try { speechSynthesis.cancel(); } catch (e) { }
 
-  function endGame() {
-    Session.saveGame({ teams, scores, gameMode, room, questions });
-    socket.emit('host-next-question', { room });
-    try { $('tenseMusic').pause(); $('tenseMusic').currentTime = 0; } catch(e) {}
-    try { speechSynthesis.cancel(); } catch(e) {}
+                const hostView = document.querySelector('.host-view');
+                hostView.style.display = 'none';
 
-    const hostView = document.querySelector('.host-view');
-    hostView.style.display = 'none';
+                const entries = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+                const scoreboard = entries.map(([key, pts]) => {
+                    const team = teams.find(t => t.id === key);
+                    const name = team ? team.name : key;
+                    const colour = team ? team.colour : '#FFD93D';
+                    return `<div style="display:flex;align-items:center;gap:1rem;margin:0.5rem;font-size:1.1rem;">
+            <span style="width:16px;height:16px;border-radius:50%;background:${colour};border:2px solid white;"></span>
+            <span>${name}</span>
+            <span style="margin-left:auto;font-weight:800;font-size:1.4rem;color:#FFD93D;">${pts}</span>
+          </div>`;
+                }).join('');
 
-    const entries = Object.entries(scores).sort((a,b) => b[1]-a[1]);
-    const scoreboard = entries.map(([key, pts]) => {
-      const team = teams.find(t => t.id === key);
-      const name = team ? team.name : key;
-      const colour = team ? team.colour : '#FFD93D';
-      return `<div style="display:flex;align-items:center;gap:1rem;margin:0.5rem;font-size:1.1rem;">
-        <span style="width:16px;height:16px;border-radius:50%;background:${colour};border:2px solid white;"></span>
-        <span>${name}</span>
-        <span style="margin-left:auto;font-weight:800;font-size:1.4rem;color:#FFD93D;">${pts}</span>
-      </div>`;
-    }).join('');
+                const endOverlay = document.createElement('div');
+                endOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#1a1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;z-index:1000;overflow-y:auto;padding:2rem;';
+                endOverlay.innerHTML = `
+          <h1 style="font-family:Bangers,Impact,sans-serif;font-size:3.5rem;margin-bottom:0.5rem;color:#FFD93D;">🏆 Game Over! 🏆</h1>
+          <div style="background:rgba(255,217,61,0.1);border:3px solid #FFD93D;border-radius:16px;padding:1.5rem;margin-bottom:2rem;max-width:500px;width:100%;text-align:center;">
+            ${scoreboard}
+          </div>
+          <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;">
+            <button id="playAgainBtn"   style="padding:0.75rem 1.75rem;border:3px solid white;border-radius:10px;background:#FFD93D;color:#0d0d1a;font-weight:800;font-size:1.1rem;cursor:pointer;">Play Again</button>
+            <button id="viewResultsBtn" style="padding:0.75rem 1.75rem;border:3px solid #FFD93D;border-radius:10px;background:transparent;color:#FFD93D;font-weight:800;font-size:1.1rem;cursor:pointer;">View Results</button>
+            <button id="homeBtn"        style="padding:0.75rem 1.75rem;border:3px solid rgba(255,255,255,0.4);border-radius:10px;background:transparent;color:rgba(255,255,255,0.6);font-weight:800;font-size:1.1rem;cursor:pointer;">🏠 End &amp; Go Home</button>
+          </div>
+        `;
+                document.body.appendChild(endOverlay);
 
-    const endOverlay = document.createElement('div');
-    endOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#1a1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;z-index:1000;overflow-y:auto;padding:2rem;';
-    endOverlay.innerHTML = `
-      <h1 style="font-family:Bangers,Impact,sans-serif;font-size:3.5rem;margin-bottom:0.5rem;color:#FFD93D;">🏆 Game Over! 🏆</h1>
-      <div style="background:rgba(255,217,61,0.1);border:3px solid #FFD93D;border-radius:16px;padding:1.5rem;margin-bottom:2rem;max-width:500px;width:100%;text-align:center;">
-        ${scoreboard}
-      </div>
-      <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;">
-        <button id="playAgainBtn"   style="padding:0.75rem 1.75rem;border:3px solid white;border-radius:10px;background:#FFD93D;color:#0d0d1a;font-weight:800;font-size:1.1rem;cursor:pointer;">Play Again</button>
-        <button id="viewResultsBtn" style="padding:0.75rem 1.75rem;border:3px solid #FFD93D;border-radius:10px;background:transparent;color:#FFD93D;font-weight:800;font-size:1.1rem;cursor:pointer;">View Results</button>
-        <button id="homeBtn"        style="padding:0.75rem 1.75rem;border:3px solid rgba(255,255,255,0.4);border-radius:10px;background:transparent;color:rgba(255,255,255,0.6);font-weight:800;font-size:1.1rem;cursor:pointer;">🏠 End &amp; Go Home</button>
-      </div>
-    `;
-    document.body.appendChild(endOverlay);
+                $('playAgainBtn').onclick = () => {
+                    endOverlay.remove();
+                    hostView.style.display = '';
+                    currentQ = 0;
+                    scores = {};
+                    if (gameMode === 'teams') teams.forEach(t => scores[t.id] = 0);
+                    socket.emit('host-reset-game', { room, questions });
+                    // displayQuestion() will be called when game-reset triggers game-started-equivalent
+                };
 
-    $('playAgainBtn').onclick = () => {
-      endOverlay.remove();
-      hostView.style.display = '';
-      currentQ = 0;
-      scores = {};
-      if (gameMode === 'teams') teams.forEach(t => scores[t.id] = 0);
-      socket.emit('host-reset-game', { room, questions });
-      // displayQuestion() will be called when game-reset triggers game-started-equivalent
-    };
+                $('viewResultsBtn').onclick = () => { window.location.href = '/results'; };
 
-    $('viewResultsBtn').onclick = () => { window.location.href = '/results'; };
+                $('homeBtn').onclick = () => {
+                    socket.emit('host-end-session', { room });
+                    Session.clearRoom(); Session.clearGame();
+                    window.location.href = '/';
+                };
+            }
 
-    $('homeBtn').onclick = () => {
-      socket.emit('host-end-session', { room });
-      Session.clearRoom(); Session.clearGame();
-      window.location.href = '/';
-    };
-  }
-
-  // Handle play-again reset — server sends game-reset, then we need to re-init
-  socket.on('game-reset', data => {
-    questions = data.questions;
-    scores = data.scores || {};
-    currentQ = 0;
-    $('totalQuestions').textContent = `/ ${questions.length}`;
-    displayQuestion();
-  });
-})();
-</script>
+            // Handle play-again reset — server sends game-reset, then we need to re-init
+            socket.on('game-reset', data => {
+                questions = data.questions;
+                scores = data.scores || {};
+                currentQ = 0;
+                $('totalQuestions').textContent = `/ ${questions.length}`;
+                displayQuestion();
+            });
+        })();
+    </script>
 </body>
 </html>

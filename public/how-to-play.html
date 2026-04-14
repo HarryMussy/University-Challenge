@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How to Play — University Challenge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ── How To Play page styles ─────────────────── */
+    .htp-page {
+      min-height: 100vh;
+      background: var(--ink);
+      background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 20px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem 4rem;
+      font-family: var(--font-body);
+    }
+
+    /* Role picker */
+    .htp-picker {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      width: 100%;
+      max-width: 560px;
+      padding-top: 1rem;
+    }
+    .htp-title {
+      font-family: var(--font-display);
+      font-size: 3.2rem;
+      letter-spacing: 4px;
+      color: var(--gold);
+      text-align: center;
+      line-height: 1;
+      text-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+    }
+    .htp-subtitle {
+      color: rgba(255,255,255,0.5);
+      font-weight: 700;
+      font-size: 1rem;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+    .htp-role-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      width: 100%;
+    }
+    .htp-role-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1.75rem 1rem;
+      border: 4px solid var(--ink);
+      border-radius: 16px;
+      cursor: pointer;
+      font-family: var(--font-body);
+      box-shadow: 6px 6px 0 var(--gold);
+      transition: transform 0.12s, box-shadow 0.12s;
+      background: white;
+    }
+    .htp-role-btn:hover  { transform: translate(-2px,-2px); box-shadow: 8px 8px 0 var(--gold); }
+    .htp-role-btn:active { transform: translate(2px,2px);  box-shadow: 2px 2px 0 var(--gold); }
+    .htp-role-btn.teacher-btn { background: var(--gold); }
+    .htp-role-btn.student-btn { background: var(--red); color: white; }
+    .htp-role-icon  { font-size: 2.8rem; }
+    .htp-role-label { font-family: var(--font-display); font-size: 1.8rem; letter-spacing: 2px; }
+    .htp-role-sub   { font-size: 0.8rem; font-weight: 700; opacity: 0.7; }
+
+    /* Back button */
+    .htp-back {
+      align-self: flex-start;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: transparent;
+      border: none;
+      color: rgba(255,255,255,0.5);
+      font-family: var(--font-body);
+      font-weight: 800;
+      font-size: 0.9rem;
+      cursor: pointer;
+      padding: 0.4rem 0;
+      letter-spacing: 0.5px;
+      transition: color 0.15s;
+      margin-bottom: 0.5rem;
+    }
+    .htp-back:hover { color: var(--gold); }
+
+    /* Manual */
+    .htp-manual {
+      width: 100%;
+      max-width: 700px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .manual-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .manual-role-badge {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      letter-spacing: 3px;
+      padding: 0.3rem 1rem;
+      border-radius: 20px;
+      border: 3px solid var(--ink);
+    }
+    .manual-role-badge.teacher { background: var(--gold); color: var(--ink); }
+    .manual-role-badge.student { background: var(--red);  color: white; }
+    .manual-title {
+      font-family: var(--font-display);
+      font-size: 2.8rem;
+      letter-spacing: 3px;
+      color: white;
+      line-height: 1;
+    }
+
+    /* Step cards */
+    .step-card {
+      display: grid;
+      grid-template-columns: 1fr 200px;
+      gap: 1.5rem;
+      background: var(--panel);
+      border: 4px solid var(--ink);
+      border-radius: 0;
+      padding: 1.75rem 2rem;
+      position: relative;
+      border-bottom: none;
+      animation: stepSlide 0.4s ease-out both;
+    }
+    .step-card:first-of-type { border-radius: 16px 16px 0 0; }
+    .step-card:last-of-type  { border-radius: 0 0 16px 16px; border-bottom: 4px solid var(--ink); }
+    .step-card:only-of-type  { border-radius: 16px; border-bottom: 4px solid var(--ink); }
+    @keyframes stepSlide {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: none; }
+    }
+    .step-card:nth-child(1) { animation-delay: 0.05s; }
+    .step-card:nth-child(2) { animation-delay: 0.10s; }
+    .step-card:nth-child(3) { animation-delay: 0.15s; }
+    .step-card:nth-child(4) { animation-delay: 0.20s; }
+    .step-card:nth-child(5) { animation-delay: 0.25s; }
+    .step-card:nth-child(6) { animation-delay: 0.30s; }
+    .step-card:nth-child(7) { animation-delay: 0.35s; }
+
+    /* Alternating accent stripe on left */
+    .step-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 6px;
+      border-radius: 0;
+    }
+    .step-card:nth-child(odd)::before  { background: var(--gold); }
+    .step-card:nth-child(even)::before { background: var(--red); }
+    .step-card:first-of-type::before { border-top-left-radius: 12px; }
+    .step-card:last-of-type::before  { border-bottom-left-radius: 12px; }
+
+    .step-content { display: flex; flex-direction: column; gap: 0.5rem; }
+    .step-num {
+      font-family: var(--font-display);
+      font-size: 3.5rem;
+      line-height: 1;
+      color: rgba(13,13,26,0.08);
+      position: absolute;
+      right: 1.25rem;
+      top: 0.75rem;
+      pointer-events: none;
+    }
+    .step-heading {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      letter-spacing: 2px;
+      color: var(--ink);
+      line-height: 1.1;
+    }
+    .step-body {
+      font-size: 0.92rem;
+      color: #444;
+      font-weight: 600;
+      line-height: 1.6;
+    }
+    .step-tip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: white;
+      background: var(--ink);
+      border-radius: 6px;
+      padding: 0.2rem 0.6rem;
+      margin-top: 0.25rem;
+      width: fit-content;
+    }
+
+    /* SVG illustration area */
+    .step-illo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .step-illo svg {
+      width: 100%;
+      max-width: 180px;
+      height: auto;
+      filter: drop-shadow(3px 3px 0 rgba(0,0,0,0.15));
+    }
+
+    @media (max-width: 600px) {
+      .step-card {
+        grid-template-columns: 1fr;
+        padding: 1.25rem 1.25rem 1.25rem 1.5rem;
+      }
+      .step-illo { display: none; }
+      .htp-role-btns { grid-template-columns: 1fr; }
+    }
+
+    /* Home link */
+    .htp-home-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      text-decoration: none;
+      color: rgba(255,255,255,0.4);
+      font-weight: 800;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+      position: fixed;
+      top: 1.25rem;
+      left: 1.25rem;
+      transition: color 0.15s;
+      z-index: 10;
+    }
+    .htp-home-link:hover { color: var(--gold); }
+  </style>
+</head>
+<body>
+
+<a href="/" class="htp-home-link">← Home</a>
+
+<div class="htp-page">
+
+  <!-- PICKER (default view) -->
+  <div id="pickerView" class="htp-picker">
+    <div style="margin-top:3rem;"></div>
+    <svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" style="width:180px;">
+      <polygon points="170,6 320,52 320,118 170,154 20,118 20,52" fill="#0d0d1a" stroke="#FFD93D" stroke-width="4"/>
+      <text x="170" y="90" text-anchor="middle" font-family="Bangers,Impact,sans-serif" font-size="68" fill="#FFD93D" letter-spacing="2">UC</text>
+      <rect x="80" y="100" width="180" height="26" rx="4" fill="#FF6B6B"/>
+      <text x="170" y="119" text-anchor="middle" font-family="Bangers,Impact,sans-serif" font-size="14" fill="white" letter-spacing="3">UNIVERSITY CHALLENGE</text>
+    </svg>
+    <h1 class="htp-title">HOW TO PLAY</h1>
+    <p class="htp-subtitle">SELECT YOUR ROLE TO GET STARTED</p>
+    <div class="htp-role-btns">
+      <button class="htp-role-btn teacher-btn" onclick="showManual('teacher')">
+        <span class="htp-role-icon">🎓</span>
+        <span class="htp-role-label">Teacher</span>
+        <span class="htp-role-sub">Host a game</span>
+      </button>
+      <button class="htp-role-btn student-btn" onclick="showManual('student')">
+        <span class="htp-role-icon">⚡</span>
+        <span class="htp-role-label">Student</span>
+        <span class="htp-role-sub">Join a game</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- TEACHER MANUAL -->
+  <div id="teacherManual" class="htp-manual hidden">
+    <button class="htp-back" onclick="showPicker()">← Back</button>
+    <div class="manual-header">
+      <span class="manual-role-badge teacher">🎓 TEACHER</span>
+    </div>
+    <h2 class="manual-title" style="margin-bottom:1.5rem;">TEACHER'S GUIDE</h2>
+
+    <div class="step-card">
+      <div class="step-content">
+        <div class="step-num">01</div>
+        <div class="step-heading">Sign In</div>
+        <div class="step-body">Go to the Teacher page and enter your staff email address. You'll receive a 6-digit verification code — enter it to access the dashboard. Your login stays active for 7 days.</div>
+        <div class="step-tip">✉️ Only authorised school email addresses are accepted</div>
+      </div>
+      <div class="step-illo">
+        <!-- Email / OTP illustration -->
+        <svg viewBox="0 0 160 130" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="25" width="140" height="80" rx="10" fill="#FAFAF7" stroke="#0d0d1a" stroke-width="3"/>
+          <polyline points="10,25 80,75 150,25" fill="none" stroke="#FF6B6B" stroke-width="3" stroke-linejoin="round"/>
+          <rect x="30" y="85" width="100" height="12" rx="4" fill="#FFD93D" stroke="#0d0d1a" stroke-width="2"/>
+          <rect x="40" y="88" width="12" height="6" rx="2" fill="#0d0d1a"/>
+          <rect x="56" y="88" width="12" height="6" rx="2" fill="#0d0d1a"/>
+          <rect x="72" y="88" width="12" height="6" rx="2" fill="#0d0d1a"/>
+          <rect x="88" y="88" width="12" height="6" rx="2" fill="#0d0d1a"/>
+          <circle cx="130" cy="30" r="18" fill="#6BCF7F" stroke="#0d0d1a" stroke-width="3"/>
+          <text x="130" y="36" text-anchor="middle" font-family="Bangers,sans-serif" font-size="18" fill="white">✓</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-content">
+        <div class="step-num">02</div>
+        <div class="step-heading">Choose a Game Mode</div>
+        <div class="step-body">Pick <strong>Teams</strong> to have students compete in groups, or <strong>Individuals</strong> for every student to play for themselves. In Teams mode, set how many teams (2–8) and name each one.</div>
+        <div class="step-tip">👥 Teams mode is great for larger classes</div>
+      </div>
+      <div class="step-illo">
+        <svg viewBox="0 0 160 130" xmlns="http://www.w3.org/2000/svg">
+          <!-- Teams card -->
+          <rect x="8" y="20" width="65" height="80" rx="8" fill="#FFD93D" stroke="#0d0d1a" stroke-width="3"/>
+          <text x="40" y="52" text-anchor="middle" font-family="Bangers,sans-serif" font-size="22" fill="#0d0d1a">👥</text>
+          <text x="40" y="72" text-anchor="middle" font-family="Bangers,sans-serif" font-size="13" fill="#0d0d1a">TEAMS</text>
+          <rect x="10" y="82" width="61" height="10" rx="3" fill="#0d0d1a" opacity="0.12"/>
+          <!-- Solo card -->
+          <rect x="87" y="20" width="65" height="80" rx="8" fill="#FAFAF7" stroke="#0d0d1a" stroke-width="3"/>
+          <text x="119" y="52" text-anchor="middle" font-family="Bangers,sans-serif" font-size="22" fill="#0d0d1a">🧠</text>
+          <text x="119" y="72" text-anchor="middle" font-family="Bangers,sans-serif" font-size="10" fill="#0d0d1a">INDIVIDUAL</text>
+          <!-- Active indicator -->
+          <circle cx="40" cy="112" r="5" fill="#6BCF7F" stroke="#0d0d1a" stroke-width="2"/>
+          <circle cx="119" cy="112" r="5" fill="#ccc" stroke="#0d0d1a" stroke-width="2"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-content">
+        <div class="step-num">03</div>
+        <div class="step-heading">Upload Questions</div>
+        <div class="step-body">Download the Excel template, fill in your questions, answers and point values (default 2pts each), then upload it. You'll see a preview of the questions before starting.</div>
+        <div class="step-tip">📋 Up to any number of questions — they'll be shuffled randomly</div>
+      </div>
+      <div class="step-illo">
+        <svg viewBox="0 0 160 130" xmlns="http://www.w3.org/2000/svg">
+          <!-- Spreadsheet -->
+          <rect x="25" y="15" width="110" height="85" rx="8" fill="#FAFAF7" stroke="#0d0d1a" stroke-width="3"/>
+          <rect x="25" y="15" width="110" height="22" rx="8" fill="#6BCF7F" stroke="#0d0d1a" stroke-width="3"/>
+          <rect x="25" y="29" width="110" height="8" fill="#6BCF7F"/>
+          <text x="80" y="30" text-anchor="middle" font-family="Bangers,sans-serif" font-size="11" fill="white" letter-spacing="1">Q &nbsp;&nbsp; ANSWER &nbsp;&nbsp; PTS</text>
+          <rect x="32" y="44" width="96" height="7" rx="2" fill="#eee"/>
+          <rect x="32" y="56" width="96" height="7" rx="2" fill="#eee"/>
+          <rect x="32" y="68" width="96" height="7" rx="2" fill="#eee"/>
+          <rect x="32" y="80" width="60" height="7" rx="2" fill="#eee"/>
+          <!-- Upload arrow -->
+          <circle cx="120" cy="110" r="18" fill="#FF6B6B" stroke="#0d0d1a" stroke-width="3"/>
+          <polyline points="113,113 120,105 127,113" fill="none" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
+          <line x1="120" y1="105" x2="120" y2="117" stroke="white" stroke-width="2.5"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-content">
+        <div class="step-num">04</div>
+        <div class="step-heading">Create a Room</div>
+        <div class="step-body">Click <strong>Create Room</strong> to generate a 6-letter room code. Share this code with students so they can join. You can see players appear in the lobby list in real time. In Teams mode, wait until every player has selected a team before starting.</div>
+        <div class="step-tip">📋 Use "Copy" to quickly share the room code</div>
+      </div>
+      <div class="step-illo">
+        <svg viewBox="0 0 160 130" xmlns="http://www.w3.org/2000/svg">
+          <!-- Room code display -->
+          <rect x="15" y="20" width="130" height="40" rx="8" fill="#0d0d1a" stroke="#FFD93D" stroke-width="3"/>
+          <text x="80" y="46" text-anchor="middle" font-family="Bangers,sans-serif" font-size="24" fill="#FFD93D" letter-spacing="8">ABCDEF</text>
+          <!-- Players joining -->
+          <circle cx="40" cy="95" r="14" fill="#4A90D9" stroke="#0d0d1a" stroke-width="2.5"/>
+          <text x="40" y="100" text-anchor="middle" font-family="Bangers,sans-serif" font-size="13" fill="white">S</text>
+          <circle cx="80" cy="95" r="14" fill="#FF6B6B" stroke="#0d0d1a" stroke-width="2.5"/>
+          <text x="80" y="100" text-anchor="middle" font-family="Bangers,sans-serif" font-size="13" fill="white">S</text>
+          <circle cx="120" cy="95" r="14" fill="#6BCF7F" stroke="#0d0d1a" stroke-width="2.5"/>
+          <text x="120" y="100" text-anchor="middle" font-family="Bangers,sans-serif" font-size="13" fill="white">S</text>
+          <!-- Arrows pointing up to code -->
+          <line x1="40" y1="79" x2="55" y2="65" stroke="#FFD93D" stroke-width="2" stroke-dasharray="3,2"/>
+          <line x1="80" y1="79" x2="80" y2="65" stroke="#FFD93D" stroke-width="2" stroke-dasharray="3,2"/>
+          <line x1="120" y1="79" x2="105" y2="65" stroke="#FFD93D" stroke-width="2" stroke-dasharray="3,2"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-content">
+        <div class="step-num">05</div>
+        <div class="step-heading">Run the Game</div>
+        <div class="step-body">Click <strong>Reveal Question</strong> to show a question to all students — it types out character by character and is read aloud. When a student buzzes in, the reveal pauses and you see who buzzed. Judge the spoken answer, then click <strong>Correct</strong> or <strong>Incorrect</strong>.</div>
+        <div class="step-tip">🎤 The question is read aloud automatically via text-to-speech</div>
+      </div>
+      <div class="step-illo">
+        <svg viewBox="0 0 160 130" xmlns="http://www.w3.org/2000/svg">
+          <!-- Screen -->
+          <rect x="10" y="10" width="140" height="75" rx="8" fill="#1a1a2e" stroke="#FFD93D" stroke-width="3"/>
+          <text x="80" y="38" text-anchor="middle" font-family="Bangers,sans-serif" font-size="11" fill="white">What is the capital</text>
+          <text x="80" y="52" text-anchor="middle" font-family="Bangers,sans-serif" font-size="11" fill="white">of France?</text>
+          <!-- Buzz flash -->
+          <circle cx="80" cy="68" r="10" fill="#FF6B6B" stroke="white" stroke-width="2"/>
+          <text x="80" y="73" text-anchor="middle" font-family="Bangers,sans-serif" font-size="9" fill="white">🔔</text>
+          <!-- Buttons -->
+          <rect x="15" y="96" width="55" height="22" rx="6" fill="#6BCF7F" stroke="#0d0d1a" stroke-width="2"/>
+          <text x="42" y="111" text-anchor="middle" font-family="Bangers,sans-serif" font-size="11" fill="white">✓ CORRECT</text>
+          <rect x="90" y="96" width="55" height="22" rx="6" fill="#FF6B6B" stroke="#0d0d1a" stroke-width="2"/>
+          <text x="117" y="111" text-anchor="middle" font-family="Bangers,sans-serif" font-size="11" fill="white">✗ WRONG</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-content">
+        <div class="step-num">06</div>
+        <div class="step-heading">Correct vs Incorrect</div>
+        <div class="step-body">A <strong>correct answer</strong> reveals the answer on screen, awards points, and moves to the next question. An <strong>incorrect answer</strong> deducts a point — the question gets shuffled back into the remaining questions to be answered later. Click <strong>Next →</strong> to continue.</div>
+        <div class="step-tip">🔄 Wrong answers come back later — no question is skipped forever</div>
+      </div>
+      <div class="step-illo">
+        <svg viewBox="0 0 160 130" xmlns="http://www.w3.org/2000/svg">
+          <!-- Correct path -->
+          <rect x="10" y="15" width="60" height="40" rx="6" fill="#6BCF7F" stroke="#0d0d1a" stroke-width="2.5"/>
+          <text x="40" y="30" text-anchor="middle" font-family="Bangers,sans-serif" font-size="13" fill="white">✓ RIGHT</text>
+          <text x="40" y="46" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" fill="white" font-weight="800">+2 pts</text>
+          <path d="M70,35 L95,70" stroke="#6BCF7F" stroke-width="2.5" stroke-dasharray="4,2" marker-end="url(#arr)"/>
+          <!-- Incorrect path -->
+          <rect x="90" y="15" width="60" height="40" rx="6" fill="#FF6B6B" stroke="#0d0d1a" stroke-width="2.5"/>
+          <text x="120" y="30" text-anchor="middle" font-family="Bangers,sans-serif" font-size="12" fill="white">✗ WRONG</text>
+          <text x="120" y="46" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" fill="white" font-weight="800">−1 pt</text>
+          <path d="M120,55 C120,80 80,80 80,100" stroke="#FF6B6B" stroke-width="2.5" fill="none" stroke-dasharray="4,2"/>
+          <!-- Recycle -->
+          <rect x="55" y="95" width="50" height="24" rx="6" fill="#FFD93D" stroke="#0d0d1a" stroke-width="2"/>
+          <text x="80" y="111" text-anchor="middle" font-family="Bangers,sans-serif" font-size="10" fill="#0d0d1a">🔄 RETRY</text>
+          <defs>
+            <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#6BCF7F"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-content">
+        <div class="step-num">07</div>
+        <div class="step-heading">Game Over</div>
+        <div class="step-body">Once every question has been correctly answered, the game ends and a leaderboard appears on everyone's screen. You can then choose to <strong>Play Again</strong> (sends everyone back to the lobby) or <strong>Go Home</strong> to close the room permanently.</div>
+        <div class="step-tip">🏆 Play Again reshuffles all questions for a fresh game</div>
+      </div>
+      <div class="step-illo">
+        <svg viewBox="0 0 160 130" xmlns="http://www.w3.org/2000/svg">
+          <!-- Trophy -->
+          <rect x="55" y="95" width="50" height="10" rx="3" fill="#FFD93D" stroke="#0d0d1a" stroke-width="2"/>
+          <rect x="65" y="85" width="30" height="12" rx="2" fill="#FFD93D" stroke="#0d0d1a" stroke-width="2"/>
+          <path d="M45,20 Q40,55 80,75 Q120,55 115,20 Z" fill="#FFD93D" stroke="#0d0d1a" stroke-width="3"/>
+          <path d="M45,20 Q25,22 28,48 Q35,65 55,62" fill="none" stroke="#0d0d1a" stroke-width="2.5"/>
+          <path d="M115,20 Q135,22 132,48 Q125,65 105,62" fill="none" stroke="#0d0d1a" stroke-width="2.5"/>
+          <text x="80" y="55" text-anchor="middle" font-family="Bangers,sans-serif" font-size="28" fill="#0d0d1a">🏆</text>
+          <!-- Podium -->
+          <rect x="20" y="108" width="30" height="18" rx="3" fill="#4A90D9" stroke="#0d0d1a" stroke-width="2"/>
+          <rect x="65" y="100" width="30" height="26" rx="3" fill="#FFD93D" stroke="#0d0d1a" stroke-width="2"/>
+          <rect x="110" y="112" width="30" height="14" rx="3" fill="#FF6B6B" stroke="#0d0d1a" stroke-width="2"/>
+          <text x="35" y="121" text-anchor="middle" font-family="Bangers,sans-serif" font-size="10" fill="white">2</text>
+          <text x="80" y="117" text-anchor="middle" font-family="Bangers,sans-serif" font-size="10" fill="#0d0d1a">1</text>
+          <text x="125" y="123" text-anchor="middle" font-family="Bangers,sans-serif" font-size="10" fill="white">3</text>
+        </svg>
+      </div>
+    </div>
+
+  </div><!-- end teacherManual -->
+
+  <!-- STUDENT MANUAL -->
+  <div id="studentManual" class="htp-manual hidden">
+    <button class="htp-back" onclick="showPicker()">← Back</button>
+    <div class="manual-header">
+      <span class="manual-role-badge student">⚡ STUDENT</span>
+    </div>
+    <h2 class="manual-title" style="margin-bottom:1.5rem;">STUDENT'S GUIDE</h2>
+
+    <div class="step-card">
+      <div class="step-content">
+        <div class="step-num">01</div>
+        <div class="step-heading">Join the Room</div>
+        <div class="step-body">Click <strong>Student</strong> on the home page, then enter the 6-letter room code your teacher gives you. Type your name and hit <strong>Join Game</strong>. You'll be taken straight to the lobby.</div>
+        <div class="step-tip">📱 Works on any phone, tablet or computer</div>
+      </div>
+      <div class="step-illo">
+        <svg viewBox="0 0 160 130" xmlns="http://www.w3.org/2000/svg">
+          <!-- Phone shape -->
+          <rect x="45" y="10" width="70" height="110" rx="10" fill="#FAFAF7" stroke="#0d0d1a" stroke-width="3"/>
+          <rect x="55" y="25" width="50" height="35" rx="4" fill="#1a1a2e"/>
+          <text x="80" y="37" text-anchor="middle" font-family="Bangers,sans-serif" font-size="9" fill="rgba(255,255,255,0.5)">ROOM CODE</text>
+          <text x="80" y="52" text-anchor="middle" font-family="Bangers,sans-serif" font-size="16" fill="#FFD93D" letter-spacing="3">ABCDEF</text>
+          <rect x="55" y="68" width="50" height="14" rx="4" fill="#eee" stroke="#ccc" stroke-width="1"/>
+          <text x="80" y="79" text-anchor="middle" font-family="Nunito,sans-serif" font-size="8" fill="#999" font-weight="700">Your name…</text>
+          <rect x="55" y="88" width="50" height="16" rx="4" fill="#FF6B6B" stroke="#0d0d1a" stroke-width="2"/>
+          <text x="80" y="100" text-anchor="middle" font-family="Bangers,sans-serif" font-size="11" fill="white">JOIN GAME</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-content">
+        <div class="step-num">02</div>
+        <div class="step-heading">Pick Your Team</div>
+        <div class="step-body">If your teacher set up <strong>Teams mode</strong>, you'll be shown the available teams — tap one to join it. Your button will highlight to confirm your choice. In <strong>Individual mode</strong>, you'll go straight to a waiting screen.</div>
+        <div class="step-tip">⚠️ You must pick a team before the game can start</div>
+      </div>
+      <div class="step-illo">
+        <svg viewBox="0 0 160 130" xmlns="http://www.w3.org/2000/svg">
+          <!-- Team buttons -->
+          <rect x="15" y="25" width="58" height="50" rx="8" fill="#FF6B6B" stroke="#0d0d1a" stroke-width="2.5"/>
+          <text x="44" y="45" text-anchor="middle" font-family="Bangers,sans-serif" font-size="11" fill="white">TEAM</text>
+          <text x="44" y="60" text-anchor="middle" font-family="Bangers,sans-serif" font-size="11" fill="white">ALPHA</text>
+          <!-- Selected indicator -->
+          <rect x="11" y="21" width="66" height="58" rx="11" fill="none" stroke="#FFD93D" stroke-width="4"/>
+          <circle cx="79" cy="25" r="10" fill="#FFD93D" stroke="#0d0d1a" stroke-width="2"/>
+          <text x="79" y="30" text-anchor="middle" font-family="Bangers,sans-serif" font-size="12" fill="#0d0d1a">✓</text>
+          <rect x="87" y="25" width="58" height="50" rx="8" fill="#4A90D9" stroke="#0d0d1a" stroke-width="2.5"/>
+          <text x="116" y="45" text-anchor="middle" font-family="Bangers,sans-serif" font-size="11" fill="white">TEAM</text>
+          <text x="116" y="60" text-anchor="middle" font-family="Bangers,sans-serif" font-size="11" fill="white">BETA</text>
+          <!-- Waiting text -->
+          <rect x="20" y="90" width="120" height="28" rx="6" fill="#1a1a2e" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+          <circle cx="38" cy="104" r="5" fill="#6BCF7F"/>
+          <text x="55" y="108" font-family="Nunito,sans-serif" font-size="9" fill="rgba(255,255,255,0.7)" font-weight="700">Waiting for host…</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-content">
+        <div class="step-num">03</div>
+        <div class="step-heading">Listen to the Question</div>
+        <div class="step-body">When the teacher reveals a question, it appears on your screen character by character and is read aloud. Read it carefully — you'll need to know the answer before buzzing in!</div>
+        <div class="step-tip">🔊 Make sure your volume is turned up</div>
+      </div>
+      <div class="step-illo">
+        <svg viewBox="0 0 160 130" xmlns="http://www.w3.org/2000/svg">
+          <!-- Question on screen -->
+          <rect x="15" y="15" width="130" height="65" rx="8" fill="#1a1a2e" stroke="#FFD93D" stroke-width="3"/>
+          <text x="80" y="38" text-anchor="middle" font-family="Bangers,sans-serif" font-size="10" fill="white">What is the chemical</text>
+          <text x="80" y="52" text-anchor="middle" font-family="Bangers,sans-serif" font-size="10" fill="white">symbol for Gold?</text>
+          <!-- Typing cursor -->
+          <rect x="105" y="47" width="3" height="10" rx="1" fill="#FFD93D">
+            <animate attributeName="opacity" values="1;0;1" dur="0.8s" repeatCount="indefinite"/>
+          </rect>
+          <!-- Sound waves -->
+          <path d="M25,95 Q30,85 25,75" fill="none" stroke="#4A90D9" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M18,100 Q26,85 18,70" fill="none" stroke="#4A90D9" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+          <circle cx="38" cy="87" r="8" fill="#4A90D9" stroke="#0d0d1a" stroke-width="2"/>
+          <text x="38" y="92" text-anchor="middle" font-family="sans-serif" font-size="10" fill="white">🔊</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-content">
+        <div class="step-num">04</div>
+        <div class="step-heading">Buzz In!</div>
+        <div class="step-body">When you know the answer, tap the big red <strong>BUZZ IN!</strong> button. Only the first person to buzz gets to answer — everyone else is locked out. The teacher will ask you to say your answer out loud.</div>
+        <div class="step-tip">⚡ Only buzz if you know the answer — a wrong answer costs a point!</div>
+      </div>
+      <div class="step-illo">
+        <svg viewBox="0 0 160 130" xmlns="http://www.w3.org/2000/svg">
+          <!-- Buzz button -->
+          <circle cx="80" cy="65" r="45" fill="#FF6B6B" stroke="white" stroke-width="4"/>
+          <circle cx="80" cy="65" r="45" fill="none" stroke="#0d0d1a" stroke-width="2" opacity="0.3"/>
+          <text x="80" y="60" text-anchor="middle" font-family="Bangers,sans-serif" font-size="18" fill="white" letter-spacing="1">BUZZ</text>
+          <text x="80" y="76" text-anchor="middle" font-family="Bangers,sans-serif" font-size="18" fill="white" letter-spacing="1">IN!</text>
+          <!-- Pulse rings -->
+          <circle cx="80" cy="65" r="52" fill="none" stroke="#FF6B6B" stroke-width="2" opacity="0.4"/>
+          <circle cx="80" cy="65" r="60" fill="none" stroke="#FF6B6B" stroke-width="1.5" opacity="0.2"/>
+          <!-- Bell -->
+          <text x="80" y="122" text-anchor="middle" font-family="sans-serif" font-size="14">🔔</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-content">
+        <div class="step-num">05</div>
+        <div class="step-heading">Points &amp; Scoring</div>
+        <div class="step-body">Answer <strong>correctly</strong> and your team (or you) earns the question's points — usually 2. Answer <strong>incorrectly</strong> and you lose 1 point. The question comes back later for someone else to try. Your running score is shown at the top of your screen.</div>
+        <div class="step-tip">💡 Don't guess — it's better to let someone else buzz than lose a point</div>
+      </div>
+      <div class="step-illo">
+        <svg viewBox="0 0 160 130" xmlns="http://www.w3.org/2000/svg">
+          <!-- Score display -->
+          <rect x="20" y="10" width="120" height="30" rx="6" fill="#0d0d1a" stroke="#FFD93D" stroke-width="2"/>
+          <text x="80" y="30" text-anchor="middle" font-family="Bangers,sans-serif" font-size="16" fill="#FFD93D">Score: 14</text>
+          <!-- +2 -->
+          <rect x="20" y="55" width="55" height="30" rx="6" fill="#6BCF7F" stroke="#0d0d1a" stroke-width="2.5"/>
+          <text x="47" y="75" text-anchor="middle" font-family="Bangers,sans-serif" font-size="20" fill="white">+2</text>
+          <text x="47" y="100" text-anchor="middle" font-family="Nunito,sans-serif" font-size="8" fill="#6BCF7F" font-weight="800">CORRECT!</text>
+          <!-- -1 -->
+          <rect x="85" y="55" width="55" height="30" rx="6" fill="#FF6B6B" stroke="#0d0d1a" stroke-width="2.5"/>
+          <text x="112" y="75" text-anchor="middle" font-family="Bangers,sans-serif" font-size="20" fill="white">−1</text>
+          <text x="112" y="100" text-anchor="middle" font-family="Nunito,sans-serif" font-size="8" fill="#FF6B6B" font-weight="800">INCORRECT</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-content">
+        <div class="step-num">06</div>
+        <div class="step-heading">Game Over</div>
+        <div class="step-body">When all questions are answered correctly, you'll see a <strong>Game Over</strong> screen and a leaderboard showing the final scores. Wait for your teacher — they'll either start a new game or end the session.</div>
+        <div class="step-tip">🏆 Top of the leaderboard wins!</div>
+      </div>
+      <div class="step-illo">
+        <svg viewBox="0 0 160 130" xmlns="http://www.w3.org/2000/svg">
+          <!-- Leaderboard -->
+          <rect x="15" y="10" width="130" height="110" rx="10" fill="#FAFAF7" stroke="#0d0d1a" stroke-width="3"/>
+          <rect x="15" y="10" width="130" height="28" rx="10" fill="#0d0d1a"/>
+          <rect x="15" y="30" width="130" height="8" fill="#0d0d1a"/>
+          <text x="80" y="28" text-anchor="middle" font-family="Bangers,sans-serif" font-size="14" fill="#FFD93D" letter-spacing="2">FINAL SCORES</text>
+          <!-- 1st -->
+          <rect x="22" y="46" width="116" height="18" rx="4" fill="#FFD93D" stroke="#0d0d1a" stroke-width="1.5"/>
+          <text x="32" y="59" font-family="Bangers,sans-serif" font-size="14" fill="#0d0d1a">🥇</text>
+          <text x="52" y="59" font-family="Nunito,sans-serif" font-size="9" fill="#0d0d1a" font-weight="800">Team Alpha</text>
+          <text x="126" y="59" text-anchor="middle" font-family="Bangers,sans-serif" font-size="13" fill="#0d0d1a">24</text>
+          <!-- 2nd -->
+          <rect x="22" y="70" width="116" height="16" rx="4" fill="#FAFAF7" stroke="#0d0d1a" stroke-width="1.5"/>
+          <text x="32" y="82" font-family="Bangers,sans-serif" font-size="12" fill="#888">🥈</text>
+          <text x="52" y="82" font-family="Nunito,sans-serif" font-size="9" fill="#444" font-weight="800">Team Beta</text>
+          <text x="126" y="82" text-anchor="middle" font-family="Bangers,sans-serif" font-size="12" fill="#888">18</text>
+          <!-- 3rd -->
+          <rect x="22" y="92" width="116" height="16" rx="4" fill="#FAFAF7" stroke="#0d0d1a" stroke-width="1.5"/>
+          <text x="32" y="104" font-family="Bangers,sans-serif" font-size="12" fill="#888">🥉</text>
+          <text x="52" y="104" font-family="Nunito,sans-serif" font-size="9" fill="#444" font-weight="800">Team Gamma</text>
+          <text x="126" y="104" text-anchor="middle" font-family="Bangers,sans-serif" font-size="12" fill="#888">11</text>
+        </svg>
+      </div>
+    </div>
+
+  </div><!-- end studentManual -->
+
+</div><!-- end htp-page -->
+
+<script>
+function showManual(role) {
+  document.getElementById('pickerView').classList.add('hidden');
+  document.getElementById('teacherManual').classList.add('hidden');
+  document.getElementById('studentManual').classList.add('hidden');
+  document.getElementById(role + 'Manual').classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function showPicker() {
+  document.getElementById('teacherManual').classList.add('hidden');
+  document.getElementById('studentManual').classList.add('hidden');
+  document.getElementById('pickerView').classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>

@@ -1,224 +1,224 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Play — University Challenge</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="preload" href="style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Play — University Challenge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="preload" href="style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
 </head>
 <body style="background:#1a1a2e;">
 
-<div class="student-view">
-  <div class="student-header">
-    <div class="stu-info">
-      <span id="teamNameDisplay" class="stu-team"></span>
-      <span class="stu-score-label">Score: <strong id="scoreDisplay">0</strong></span>
+    <div class="student-view">
+        <div class="student-header">
+            <div class="stu-info">
+                <span id="teamNameDisplay" class="stu-team"></span>
+                <span class="stu-score-label">Score: <strong id="scoreDisplay">0</strong></span>
+            </div>
+            <span id="questionNumber" class="q-num-badge">Q1</span>
+        </div>
+        <div class="student-question-area">
+            <p id="questionText" class="student-question-text" style="color:rgba(255,255,255,0.4);font-style:italic;">
+                Waiting for question…
+            </p>
+        </div>
+        <div class="student-buzz-area">
+            <button id="buzzButton" class="buzz-btn" disabled>BUZZ IN!</button>
+            <div id="buzzedIndicator" class="buzzed-indicator hidden">🔔 You buzzed in!</div>
+            <div id="resultMessage" class="result-message hidden"></div>
+        </div>
     </div>
-    <span id="questionNumber" class="q-num-badge">Q1</span>
-  </div>
-  <div class="student-question-area">
-    <p id="questionText" class="student-question-text" style="color:rgba(255,255,255,0.4);font-style:italic;">
-      Waiting for question…
-    </p>
-  </div>
-  <div class="student-buzz-area">
-    <button id="buzzButton" class="buzz-btn" disabled>BUZZ IN!</button>
-    <div id="buzzedIndicator" class="buzzed-indicator hidden">🔔 You buzzed in!</div>
-    <div id="resultMessage" class="result-message hidden"></div>
-  </div>
-</div>
 
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-<script src="shared.js"></script>
-<script>
-(function() {
-  const game = Session.getGame();
-  if (!game) { window.location.href = '/join'; return; }
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="shared.js"></script>
+    <script>
+        (function () {
+            const game = Session.getGame();
+            if (!game) { window.location.href = '/join'; return; }
 
-  const { room, name, myTeamId, gameMode, teams, scores: initialScores } = game;
-  let scores = { ...initialScores };
-  let myBuzzed = false;
-  let studentReady = false;
-  let revealInterval = null;
+            const { room, name, myTeamId, gameMode, teams, scores: initialScores } = game;
+            let scores = { ...initialScores };
+            let myBuzzed = false;
+            let studentReady = false;
+            let revealInterval = null;
 
-  // Set team display
-  const myTeam = teams && teams.find(t => t.id === myTeamId);
-  $('teamNameDisplay').textContent = myTeam ? myTeam.name : name;
-  if (myTeam) $('teamNameDisplay').style.color = myTeam.colour;
-  updateScore();
+            // Set team display
+            const myTeam = teams && teams.find(t => t.id === myTeamId);
+            $('teamNameDisplay').textContent = myTeam ? myTeam.name : name;
+            if (myTeam) $('teamNameDisplay').style.color = myTeam.colour;
+            updateScore();
 
-  const socket = io();
+            const socket = io();
 
-  socket.on('connect', () => {
-    console.log('[STUDENT GAME] socket connected:', socket.id);
-    socket.emit('student-join', { room, name, teamId: myTeamId });
-  });
+            socket.on('connect', () => {
+                console.log('[STUDENT GAME] socket connected:', socket.id);
+                socket.emit('student-join', { room, name, teamId: myTeamId });
+            });
 
-  socket.on('room-info', () => {
-    console.log('[STUDENT GAME] joined room successfully');
-    studentReady = true;
-  });
+            socket.on('room-info', () => {
+                console.log('[STUDENT GAME] joined room successfully');
+                studentReady = true;
+            });
 
-  // Keep a local copy of the question order — purely for display/tracking
-  // (students don't need to act on it, but having it means future features are easy)
-  socket.on('question-order-updated', data => {
-    console.log('[STUDENT GAME] Question order updated, total:', data.questions.length);
-    // No UI change needed — student just waits for question-revealed
-  });
+            // Keep a local copy of the question order — purely for display/tracking
+            // (students don't need to act on it, but having it means future features are easy)
+            socket.on('question-order-updated', data => {
+                console.log('[STUDENT GAME] Question order updated, total:', data.questions.length);
+                // No UI change needed — student just waits for question-revealed
+            });
 
-  socket.on('join-error', (data) => {
-    console.error('[STUDENT GAME] Join failed:', data.message);
-    alert('Error: ' + data.message);
-    window.location.href = '/join';
-  });
+            socket.on('join-error', (data) => {
+                console.error('[STUDENT GAME] Join failed:', data.message);
+                alert('Error: ' + data.message);
+                window.location.href = '/join';
+            });
 
-  socket.on('question-revealed', data => {
-    if (revealInterval) clearInterval(revealInterval);
-    const text = data.text;
-    let i = 0;
-    revealInterval = setInterval(() => {
-      $('questionText').textContent = text.slice(0, i + 1);
-      $('questionText').style.color = 'white';
-      $('questionText').style.fontStyle = 'normal';
-      i++;
-      if (i >= text.length) clearInterval(revealInterval);
-    }, 50);
-    $('questionNumber').textContent = `Q${data.index + 1}`;
-    // FIX: Enable buzz on reveal and clear previous state
-    $('buzzButton').disabled = false;
-    $('buzzedIndicator').classList.add('hidden');
-    $('resultMessage').classList.add('hidden');
-    myBuzzed = false;
-  });
+            socket.on('question-revealed', data => {
+                if (revealInterval) clearInterval(revealInterval);
+                const text = data.text;
+                let i = 0;
+                revealInterval = setInterval(() => {
+                    $('questionText').textContent = text.slice(0, i + 1);
+                    $('questionText').style.color = 'white';
+                    $('questionText').style.fontStyle = 'normal';
+                    i++;
+                    if (i >= text.length) clearInterval(revealInterval);
+                }, 50);
+                $('questionNumber').textContent = `Q${data.index + 1}`;
+                // FIX: Enable buzz on reveal and clear previous state
+                $('buzzButton').disabled = false;
+                $('buzzedIndicator').classList.add('hidden');
+                $('resultMessage').classList.add('hidden');
+                myBuzzed = false;
+            });
 
-  socket.on('question-paused', () => {
-    if (revealInterval) clearInterval(revealInterval);
-  });
+            socket.on('question-paused', () => {
+                if (revealInterval) clearInterval(revealInterval);
+            });
 
-  socket.on('next-question', () => {
-    // Teacher moved to next question — reset everything
-    if (revealInterval) clearInterval(revealInterval);
-    $('questionText').textContent = 'Waiting for question…';
-    $('questionText').style.color = 'rgba(255,255,255,0.4)';
-    $('questionText').style.fontStyle = 'italic';
-    $('buzzButton').disabled = true; // disabled until question is revealed
-    $('buzzedIndicator').classList.add('hidden');
-    $('resultMessage').classList.add('hidden');
-    myBuzzed = false;
-  });
+            socket.on('next-question', () => {
+                // Teacher moved to next question — reset everything
+                if (revealInterval) clearInterval(revealInterval);
+                $('questionText').textContent = 'Waiting for question…';
+                $('questionText').style.color = 'rgba(255,255,255,0.4)';
+                $('questionText').style.fontStyle = 'italic';
+                $('buzzButton').disabled = true; // disabled until question is revealed
+                $('buzzedIndicator').classList.add('hidden');
+                $('resultMessage').classList.add('hidden');
+                myBuzzed = false;
+            });
 
-  socket.on('buzzed', data => {
-    // Lock buzz button for everyone once someone buzzes
-    $('buzzButton').disabled = true;
-    if (data.name === name) {
-      $('buzzedIndicator').classList.remove('hidden');
-    }
-  });
+            socket.on('buzzed', data => {
+                // Lock buzz button for everyone once someone buzzes
+                $('buzzButton').disabled = true;
+                if (data.name === name) {
+                    $('buzzedIndicator').classList.remove('hidden');
+                }
+            });
 
-  // buzz-reset is sent by server with next-question (belt-and-suspenders)
-  // It does NOT fire after an incorrect answer anymore — students wait for Next
-  socket.on('buzz-reset', () => {
-    $('buzzedIndicator').classList.add('hidden');
-    $('resultMessage').classList.add('hidden');
-    myBuzzed = false;
-    // Note: button stays disabled until question-revealed fires
-  });
+            // buzz-reset is sent by server with next-question (belt-and-suspenders)
+            // It does NOT fire after an incorrect answer anymore — students wait for Next
+            socket.on('buzz-reset', () => {
+                $('buzzedIndicator').classList.add('hidden');
+                $('resultMessage').classList.add('hidden');
+                myBuzzed = false;
+                // Note: button stays disabled until question-revealed fires
+            });
 
-  socket.on('answer-result', data => {
-    const el = $('resultMessage');
-    el.classList.remove('hidden', 'correct', 'incorrect');
-    el.textContent = data.correct
-      ? `✓ Correct! +${data.points} pts`
-      : `✗ Incorrect! ${data.points < 0 ? data.points : '-' + data.points} pts`;
-    el.classList.add(data.correct ? 'correct' : 'incorrect');
-    // Buzz button stays disabled either way — re-enabled only on question-revealed
-    $('buzzButton').disabled = true;
-    $('buzzedIndicator').classList.add('hidden');
-  });
+            socket.on('answer-result', data => {
+                const el = $('resultMessage');
+                el.classList.remove('hidden', 'correct', 'incorrect');
+                el.textContent = data.correct
+                    ? `✓ Correct! +${data.points} pts`
+                    : `✗ Incorrect! ${data.points < 0 ? data.points : '-' + data.points} pts`;
+                el.classList.add(data.correct ? 'correct' : 'incorrect');
+                // Buzz button stays disabled either way — re-enabled only on question-revealed
+                $('buzzButton').disabled = true;
+                $('buzzedIndicator').classList.add('hidden');
+            });
 
-  socket.on('score-update', data => {
-    scores = data.scores;
-    updateScore();
-  });
+            socket.on('score-update', data => {
+                scores = data.scores;
+                updateScore();
+            });
 
-  socket.on('game-ended', data => {
-    scores = data.scores;
-    Session.saveGame({ ...game, scores });
+            socket.on('game-ended', data => {
+                scores = data.scores;
+                Session.saveGame({ ...game, scores });
 
-    const studentView = document.querySelector('.student-view');
-    studentView.style.opacity = '0.5';
-    studentView.style.pointerEvents = 'none';
+                const studentView = document.querySelector('.student-view');
+                studentView.style.opacity = '0.5';
+                studentView.style.pointerEvents = 'none';
 
-    const endOverlay = document.createElement('div');
-    endOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;z-index:1000;font-family:Bangers,Impact,sans-serif;';
-    endOverlay.innerHTML = `
-      <h1 style="font-size:3rem;margin-bottom:2rem;color:#FFD93D;">Game Over!</h1>
-      <p style="font-size:1.2rem;font-family:Nunito,sans-serif;margin-bottom:1rem;">Waiting for the host…</p>
-      <div style="width:20px;height:20px;background:#6BCF7F;border-radius:50%;animation:pulse 1.2s infinite;"></div>
-      <style>@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.3)} }</style>
-    `;
-    document.body.appendChild(endOverlay);
-  });
+                const endOverlay = document.createElement('div');
+                endOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;z-index:1000;font-family:Bangers,Impact,sans-serif;';
+                endOverlay.innerHTML = `
+          <h1 style="font-size:3rem;margin-bottom:2rem;color:#FFD93D;">Game Over!</h1>
+          <p style="font-size:1.2rem;font-family:Nunito,sans-serif;margin-bottom:1rem;">Waiting for the host…</p>
+          <div style="width:20px;height:20px;background:#6BCF7F;border-radius:50%;animation:pulse 1.2s infinite;"></div>
+          <style>@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.3)} }</style>
+        `;
+                document.body.appendChild(endOverlay);
+            });
 
-  socket.on('game-reset', data => {
-    scores = { ...data.scores };
-    const overlay = document.querySelector('[style*="position:fixed"]');
-    if (overlay) overlay.remove();
-    const studentView = document.querySelector('.student-view');
-    if (studentView) {
-      studentView.style.opacity = '1';
-      studentView.style.pointerEvents = 'auto';
-    }
-    $('questionText').textContent = 'Waiting for question…';
-    $('questionText').style.color = 'rgba(255,255,255,0.4)';
-    $('questionText').style.fontStyle = 'italic';
-    $('buzzButton').disabled = true;
-    $('buzzedIndicator').classList.add('hidden');
-    $('resultMessage').classList.add('hidden');
-    myBuzzed = false;
+            socket.on('game-reset', data => {
+                scores = { ...data.scores };
+                const overlay = document.querySelector('[style*="position:fixed"]');
+                if (overlay) overlay.remove();
+                const studentView = document.querySelector('.student-view');
+                if (studentView) {
+                    studentView.style.opacity = '1';
+                    studentView.style.pointerEvents = 'auto';
+                }
+                $('questionText').textContent = 'Waiting for question…';
+                $('questionText').style.color = 'rgba(255,255,255,0.4)';
+                $('questionText').style.fontStyle = 'italic';
+                $('buzzButton').disabled = true;
+                $('buzzedIndicator').classList.add('hidden');
+                $('resultMessage').classList.add('hidden');
+                myBuzzed = false;
 
-    Session.saveStudent({ name, room, gameMode: data.gameMode, teams: data.teams });
-    Session.clearGame();
-    window.location.href = '/student-lobby';
-  });
+                Session.saveStudent({ name, room, gameMode: data.gameMode, teams: data.teams });
+                Session.clearGame();
+                window.location.href = '/student-lobby';
+            });
 
-  socket.on('host-disconnected', () => {
-    alert('The host has disconnected.');
-    window.location.href = '/';
-  });
+            socket.on('host-disconnected', () => {
+                alert('The host has disconnected.');
+                window.location.href = '/';
+            });
 
-  socket.on('host-left', () => {
-    alert('The teacher has ended the game.');
-    Session.clearStudent();
-    Session.clearGame();
-    window.location.href = '/';
-  });
+            socket.on('host-left', () => {
+                alert('The teacher has ended the game.');
+                Session.clearStudent();
+                Session.clearGame();
+                window.location.href = '/';
+            });
 
-  socket.on('kicked', () => {
-    alert('You have been kicked from the room.');
-    Session.clearStudent();
-    Session.clearGame();
-    window.location.href = '/join';
-  });
+            socket.on('kicked', () => {
+                alert('You have been kicked from the room.');
+                Session.clearStudent();
+                Session.clearGame();
+                window.location.href = '/join';
+            });
 
-  $('buzzButton').onclick = () => {
-    if (myBuzzed || $('buzzButton').disabled || !studentReady) {
-      console.log('[BUZZ BLOCKED]', { myBuzzed, disabled: $('buzzButton').disabled, studentReady });
-      return;
-    }
-    myBuzzed = true;
-    $('buzzButton').disabled = true;
-    console.log('[STUDENT] Buzzing in:', { room, name, teamId: myTeamId });
-    socket.emit('buzz', { room, name, teamId: myTeamId });
-  };
+            $('buzzButton').onclick = () => {
+                if (myBuzzed || $('buzzButton').disabled || !studentReady) {
+                    console.log('[BUZZ BLOCKED]', { myBuzzed, disabled: $('buzzButton').disabled, studentReady });
+                    return;
+                }
+                myBuzzed = true;
+                $('buzzButton').disabled = true;
+                console.log('[STUDENT] Buzzing in:', { room, name, teamId: myTeamId });
+                socket.emit('buzz', { room, name, teamId: myTeamId });
+            };
 
-  function updateScore() {
-    const key = myTeamId || name;
-    $('scoreDisplay').textContent = scores[key] ?? 0;
-  }
-})();
-</script>
+            function updateScore() {
+                const key = myTeamId || name;
+                $('scoreDisplay').textContent = scores[key] ?? 0;
+            }
+        })();
+    </script>
 </body>
 </html>

@@ -1,0 +1,105 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\muscr\\source\\repos\\HarryMussy\\University-Challenge\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\muscr\\source\\repos\\HarryMussy\\University-Challenge\\public\\index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:public\\index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\muscr\\source\\repos\\HarryMussy\\University-Challenge\\server.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:server.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\muscr\\source\\repos\\HarryMussy\\University-Challenge\\public\\student-lobby.html||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:public\\student-lobby.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\muscr\\source\\repos\\HarryMussy\\University-Challenge\\public\\student-game.html||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:public\\student-game.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\muscr\\source\\repos\\HarryMussy\\University-Challenge\\public\\teacher-game.html||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:public\\teacher-game.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 1,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedHeight": 276,
+          "SelectedChildIndex": 5,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "teacher-game.html",
+              "DocumentMoniker": "C:\\Users\\muscr\\source\\repos\\HarryMussy\\University-Challenge\\public\\teacher-game.html",
+              "RelativeDocumentMoniker": "public\\teacher-game.html",
+              "ToolTip": "C:\\Users\\muscr\\source\\repos\\HarryMussy\\University-Challenge\\public\\teacher-game.html",
+              "RelativeToolTip": "public\\teacher-game.html",
+              "ViewState": "AgIAABoBAAAAAAAAAAAuwCoBAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
+              "WhenOpened": "2026-04-14T07:57:01.477Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "student-game.html",
+              "DocumentMoniker": "C:\\Users\\muscr\\source\\repos\\HarryMussy\\University-Challenge\\public\\student-game.html",
+              "RelativeDocumentMoniker": "public\\student-game.html",
+              "ToolTip": "C:\\Users\\muscr\\source\\repos\\HarryMussy\\University-Challenge\\public\\student-game.html",
+              "RelativeToolTip": "public\\student-game.html",
+              "ViewState": "AgIAAMMAAAAAAAAAAAAuwN8AAAAHAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
+              "WhenOpened": "2026-04-14T07:56:42.811Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "student-lobby.html",
+              "DocumentMoniker": "C:\\Users\\muscr\\source\\repos\\HarryMussy\\University-Challenge\\public\\student-lobby.html",
+              "RelativeDocumentMoniker": "public\\student-lobby.html",
+              "ToolTip": "C:\\Users\\muscr\\source\\repos\\HarryMussy\\University-Challenge\\public\\student-lobby.html",
+              "RelativeToolTip": "public\\student-lobby.html",
+              "ViewState": "AgIAAJIAAAAAAAAAAAAuwK4AAAAHAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
+              "WhenOpened": "2026-04-14T07:56:26.634Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "server.js",
+              "DocumentMoniker": "C:\\Users\\muscr\\source\\repos\\HarryMussy\\University-Challenge\\server.js",
+              "RelativeDocumentMoniker": "server.js",
+              "ToolTip": "C:\\Users\\muscr\\source\\repos\\HarryMussy\\University-Challenge\\server.js",
+              "RelativeToolTip": "server.js",
+              "ViewState": "AgIAAGEBAAAAAAAAAAAQwHQBAABXAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
+              "WhenOpened": "2026-04-14T07:56:05.229Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "index.html",
+              "DocumentMoniker": "C:\\Users\\muscr\\source\\repos\\HarryMussy\\University-Challenge\\public\\index.html",
+              "RelativeDocumentMoniker": "public\\index.html",
+              "ToolTip": "C:\\Users\\muscr\\source\\repos\\HarryMussy\\University-Challenge\\public\\index.html",
+              "RelativeToolTip": "public\\index.html",
+              "ViewState": "AgIAAEoAAAAAAAAAAAAUwFMAAABSAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
+              "WhenOpened": "2026-04-14T07:55:43.899Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
