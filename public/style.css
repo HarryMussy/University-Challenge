@@ -272,3 +272,25 @@ body { font-family: var(--font-body); background: var(--ink); min-height: 100vh;
   flex-shrink: 0;
   margin-left: 0; /* gap handles spacing now */
 }
+
+.footer {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background-color: #222;
+  color: white;
+  padding: 10px 0;
+  text-align: center;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  align-items: center;
+}
+
+.footer button {
+  padding: 5px 10px;
+  cursor: pointer;
+}
