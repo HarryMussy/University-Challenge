@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Display — University Challenge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0d0d1a;
+      font-family: 'Nunito', sans-serif;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Layout ── */
+    .display-wrap {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      grid-template-rows: auto 1fr auto;
+      min-height: 100vh;
+      gap: 0;
+    }
+
+    /* ── Header bar ── */
+    .display-header {
+      grid-column: 1 / -1;
+      background: #0d0d1a;
+      border-bottom: 3px solid var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 2rem;
+    }
+
+    .display-logo-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .display-logo {
+      width: 70px;
+    }
+
+    .display-title {
+      font-family: 'Bangers', sans-serif;
+      font-size: 1.8rem;
+      letter-spacing: 4px;
+      color: var(--gold);
+    }
+
+    .display-q-badge {
+      font-family: 'Bangers', sans-serif;
+      font-size: 1.4rem;
+      letter-spacing: 3px;
+      background: var(--gold);
+      color: var(--ink);
+      padding: 0.3rem 1.2rem;
+      border-radius: 20px;
+      border: 3px solid var(--ink);
+    }
+
+    /* ── Main question area ── */
+    .display-main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 4rem;
+      position: relative;
+    }
+
+    .display-question {
+      font-family: 'Bangers', sans-serif;
+      font-size: clamp(2.2rem, 5vw, 4.5rem);
+      color: white;
+      text-align: center;
+      letter-spacing: 1px;
+      line-height: 1.25;
+      max-width: 900px;
+      min-height: 4rem;
+      transition: color 0.3s;
+    }
+
+    .display-question.waiting {
+      color: rgba(255,255,255,0.2);
+      font-style: italic;
+      font-size: 2rem;
+    }
+
+    /* Answer reveal */
+    .display-answer {
+      margin-top: 2rem;
+      background: rgba(107,207,127,0.12);
+      border: 3px solid var(--green);
+      border-radius: 16px;
+      padding: 1.25rem 2.5rem;
+      text-align: center;
+      animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    .display-answer-label {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: var(--green);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 0.3rem;
+    }
+
+    .display-answer-text {
+      font-family: 'Bangers', sans-serif;
+      font-size: 2.5rem;
+      letter-spacing: 2px;
+      color: var(--green);
+    }
+
+    /* ── Buzz notification ── */
+    .display-buzz-bar {
+      grid-column: 1 / -1;
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem 2rem;
+      background: #0d0d1a;
+      border-top: 3px solid rgba(255,255,255,0.08);
+      transition: background 0.3s;
+    }
+
+    .display-buzz-bar.active {
+      background: rgba(255,107,107,0.12);
+      border-top-color: var(--red);
+      animation: buzzFlash 0.5s ease-out;
+    }
+
+    .buzz-waiting-text {
+      color: rgba(255,255,255,0.2);
+      font-family: 'Bangers', sans-serif;
+      font-size: 1.4rem;
+      letter-spacing: 3px;
+    }
+
+    .buzz-active-content {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .buzz-bell {
+      font-size: 2.5rem;
+      animation: bellRing 0.6s ease-out;
+    }
+
+    @keyframes bellRing {
+      0%  { transform: rotate(-20deg); }
+      20% { transform: rotate(20deg); }
+      40% { transform: rotate(-15deg); }
+      60% { transform: rotate(15deg); }
+      80% { transform: rotate(-5deg); }
+      100%{ transform: rotate(0); }
+    }
+
+    .buzz-name {
+      font-family: 'Bangers', sans-serif;
+      font-size: 2.8rem;
+      letter-spacing: 3px;
+      color: white;
+      text-shadow: 3px 3px 0 var(--red);
+    }
+
+    .buzz-team-tag {
+      font-family: 'Bangers', sans-serif;
+      font-size: 1.2rem;
+      letter-spacing: 2px;
+      padding: 0.3rem 1rem;
+      border-radius: 8px;
+      border: 2px solid var(--ink);
+    }
+
+    .buzz-result-correct {
+      font-family: 'Bangers', sans-serif;
+      font-size: 2rem;
+      letter-spacing: 2px;
+      color: var(--green);
+      animation: popIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    .buzz-result-wrong {
+      font-family: 'Bangers', sans-serif;
+      font-size: 2rem;
+      letter-spacing: 2px;
+      color: var(--red);
+      animation: popIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    /* ── Leaderboard sidebar ── */
+    .display-sidebar {
+      background: rgba(255,255,255,0.04);
+      border-left: 3px solid rgba(255,255,255,0.08);
+      padding: 1.5rem 1.25rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .sidebar-title {
+      font-family: 'Bangers', sans-serif;
+      font-size: 1.4rem;
+      letter-spacing: 3px;
+      color: var(--gold);
+      margin-bottom: 0.25rem;
+    }
+
+    .lb-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 0.65rem 0.85rem;
+      transition: all 0.3s ease;
+    }
+
+    .lb-row.top {
+      background: rgba(255,217,61,0.12);
+      border-color: rgba(255,217,61,0.4);
+    }
+
+    .lb-rank {
+      font-family: 'Bangers', sans-serif;
+      font-size: 1.3rem;
+      color: rgba(255,255,255,0.3);
+      min-width: 1.5rem;
+    }
+
+    .lb-row.top .lb-rank { color: var(--gold); }
+
+    .lb-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.3);
+      flex-shrink: 0;
+    }
+
+    .lb-name {
+      flex: 1;
+      font-weight: 800;
+      color: white;
+      font-size: 0.92rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .lb-pts {
+      font-family: 'Bangers', sans-serif;
+      font-size: 1.5rem;
+      color: var(--gold);
+    }
+
+    /* ── Waiting overlay ── */
+    .waiting-overlay {
+      position: fixed;
+      inset: 0;
+      background: #0d0d1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      z-index: 100;
+    }
+
+    .waiting-overlay.hidden { display: none; }
+
+    .waiting-pulse {
+      width: 24px;
+      height: 24px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulseGreen 1.2s infinite;
+    }
+
+    .waiting-msg {
+      font-family: 'Bangers', sans-serif;
+      font-size: 1.8rem;
+      letter-spacing: 4px;
+      color: rgba(255,255,255,0.4);
+    }
+
+    /* ── Game over overlay ── */
+    .gameover-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      z-index: 200;
+    }
+
+    .gameover-overlay.hidden { display: none; }
+
+    .gameover-title {
+      font-family: 'Bangers', sans-serif;
+      font-size: 5rem;
+      letter-spacing: 6px;
+      color: var(--gold);
+      text-shadow: 6px 6px 0 rgba(0,0,0,0.5);
+      animation: popIn 0.5s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    .gameover-podium {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      width: 100%;
+      max-width: 500px;
+    }
+
+    .gameover-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: rgba(255,255,255,0.08);
+      border: 2px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 0.9rem 1.5rem;
+      animation: slideRight 0.4s ease-out both;
+    }
+
+    .gameover-row.first {
+      background: rgba(255,217,61,0.15);
+      border-color: var(--gold);
+    }
+
+    .gameover-medal { font-size: 1.8rem; }
+    .gameover-name  { flex: 1; font-weight: 800; color: white; font-size: 1.1rem; }
+    .gameover-pts   { font-family: 'Bangers', sans-serif; font-size: 2rem; color: var(--gold); }
+
+    @keyframes slideRight {
+      from { opacity: 0; transform: translateX(-30px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.6); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes buzzFlash {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.5; }
+    }
+
+    @keyframes pulseGreen {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%     { opacity:.4; transform:scale(1.3); }
+    }
+
+    @media (max-width: 900px) {
+      .display-wrap { grid-template-columns: 1fr; }
+      .display-sidebar { display: none; }
+      .display-question { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Waiting for game -->
+<div id="waitingOverlay" class="waiting-overlay">
+  <svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" style="width:200px;">
+    <polygon points="170,6 320,52 320,118 170,154 20,118 20,52" fill="#0d0d1a" stroke="#FFD93D" stroke-width="4"/>
+    <text x="170" y="90" text-anchor="middle" font-family="Bangers,Impact,sans-serif" font-size="68" fill="#FFD93D" letter-spacing="2">UC</text>
+    <rect x="80" y="100" width="180" height="26" rx="4" fill="#FF6B6B"/>
+    <text x="170" y="119" text-anchor="middle" font-family="Bangers,Impact,sans-serif" font-size="14" fill="white" letter-spacing="3">UNIVERSITY CHALLENGE</text>
+  </svg>
+  <div class="waiting-pulse"></div>
+  <p class="waiting-msg">WAITING FOR GAME TO START…</p>
+</div>
+
+<!-- Game over overlay -->
+<div id="gameoverOverlay" class="gameover-overlay hidden">
+  <div class="gameover-title">🏆 GAME OVER! 🏆</div>
+  <div id="gameoverPodium" class="gameover-podium"></div>
+</div>
+
+<div class="display-wrap">
+
+  <!-- Header -->
+  <div class="display-header">
+    <div class="display-logo-row">
+      <svg class="display-logo" viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="170,6 320,52 320,118 170,154 20,118 20,52" fill="#0d0d1a" stroke="#FFD93D" stroke-width="4"/>
+        <text x="170" y="90" text-anchor="middle" font-family="Bangers,Impact,sans-serif" font-size="68" fill="#FFD93D" letter-spacing="2">UC</text>
+        <rect x="80" y="100" width="180" height="26" rx="4" fill="#FF6B6B"/>
+        <text x="170" y="119" text-anchor="middle" font-family="Bangers,Impact,sans-serif" font-size="14" fill="white" letter-spacing="3">UNIVERSITY CHALLENGE</text>
+      </svg>
+      <span class="display-title">UNIVERSITY CHALLENGE</span>
+    </div>
+    <span id="qBadge" class="display-q-badge">Q1</span>
+  </div>
+
+  <!-- Main area -->
+  <div class="display-main">
+    <p id="displayQuestion" class="display-question waiting">Waiting for question…</p>
+    <div id="displayAnswer" class="display-answer" style="display:none;">
+      <div class="display-answer-label">✓ Correct Answer</div>
+      <div id="displayAnswerText" class="display-answer-text"></div>
+    </div>
+  </div>
+
+  <!-- Leaderboard sidebar -->
+  <div class="display-sidebar">
+    <div class="sidebar-title">📊 SCORES</div>
+    <div id="lbList"></div>
+  </div>
+
+  <!-- Buzz bar (bottom) -->
+  <div id="buzzBar" class="display-buzz-bar">
+    <span class="buzz-waiting-text">BUZZ IN TO ANSWER</span>
+  </div>
+
+</div>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="shared.js"></script>
+<script>
+(function() {
+  // Get room from URL query param
+  const params = new URLSearchParams(window.location.search);
+  const room = params.get('room');
+
+  // Also try session for teams/scores data
+  const roomData = Session.getRoom();
+  let teams = roomData?.teams || [];
+  let scores = roomData?.scores || {};
+  let gameMode = roomData?.gameMode || 'teams';
+  let revealInterval = null;
+  let gameStarted = false;
+
+  if (!room) {
+    document.getElementById('waitingOverlay').querySelector('.waiting-msg').textContent = 'NO ROOM CODE — OPEN FROM TEACHER GAME PAGE';
+    return;
+  }
+
+  const socket = io();
+
+  socket.on('connect', () => {
+    console.log('[DISPLAY] connected:', socket.id);
+    // Join as a passive observer — send student-join with a display marker
+    // We use a special join that doesn't register as a player
+    socket.emit('display-join', { room });
+  });
+
+  socket.on('display-joined', data => {
+    // Server confirmed room exists and sent current state
+    if (data.teams)   teams  = data.teams;
+    if (data.scores)  scores = data.scores;
+    if (data.gameMode) gameMode = data.gameMode;
+    renderLeaderboard();
+  });
+
+  socket.on('join-error', () => {
+    document.getElementById('waitingOverlay').querySelector('.waiting-msg').textContent = 'ROOM NOT FOUND';
+  });
+
+  socket.on('game-started', data => {
+    teams   = data.teams   || teams;
+    scores  = data.scores  || scores;
+    gameMode = data.gameMode || gameMode;
+    gameStarted = true;
+    document.getElementById('waitingOverlay').classList.add('hidden');
+    renderLeaderboard();
+    resetQuestion();
+  });
+
+  socket.on('question-revealed', data => {
+    if (!gameStarted) {
+      gameStarted = true;
+      document.getElementById('waitingOverlay').classList.add('hidden');
+    }
+    document.getElementById('qBadge').textContent = `Q${data.index + 1}`;
+    resetQuestion();
+    typewriterReveal(data.text);
+  });
+
+  socket.on('next-question', () => {
+    resetQuestion();
+    // Show waiting state
+    const qEl = document.getElementById('displayQuestion');
+    qEl.textContent = 'Waiting for next question…';
+    qEl.className = 'display-question waiting';
+  });
+
+  socket.on('buzzed', data => {
+    // Stop typewriter
+    if (revealInterval) { clearInterval(revealInterval); revealInterval = null; }
+
+    const buzzBar = document.getElementById('buzzBar');
+    buzzBar.classList.add('active');
+
+    const team = teams.find(t => t.id === data.teamId);
+    const teamColour = team ? team.colour : '#FF6B6B';
+    const teamName   = team ? team.name   : '';
+
+    buzzBar.innerHTML = `
+      <div class="buzz-active-content">
+        <span class="buzz-bell">🔔</span>
+        <span class="buzz-name">${data.name}</span>
+        ${teamName ? `<span class="buzz-team-tag" style="background:${teamColour};color:#0d0d1a;">${teamName}</span>` : ''}
+      </div>
+    `;
+  });
+
+  socket.on('answer-result', data => {
+    const buzzBar = document.getElementById('buzzBar');
+    // Keep the name but add result
+    const existing = buzzBar.querySelector('.buzz-active-content');
+    if (existing) {
+      const resultSpan = document.createElement('span');
+      resultSpan.className = data.correct ? 'buzz-result-correct' : 'buzz-result-wrong';
+      resultSpan.textContent = data.correct ? `✓ CORRECT! +${data.points}` : `✗ WRONG! −1`;
+      existing.appendChild(resultSpan);
+    }
+
+    if (data.correct) {
+      // Reveal answer on display
+      document.getElementById('displayAnswer').style.display = '';
+    }
+  });
+
+  socket.on('score-update', data => {
+    scores = data.scores;
+    renderLeaderboard();
+  });
+
+  socket.on('buzz-reset', () => {
+    resetBuzzBar();
+  });
+
+  socket.on('game-ended', data => {
+    scores = data.scores;
+    renderLeaderboard();
+    showGameOver();
+  });
+
+  socket.on('game-reset', data => {
+    teams   = data.teams   || teams;
+    scores  = data.scores  || scores;
+    gameMode = data.gameMode || gameMode;
+    document.getElementById('gameoverOverlay').classList.add('hidden');
+    resetQuestion();
+    renderLeaderboard();
+  });
+
+  socket.on('host-left', () => {
+    document.getElementById('waitingOverlay').classList.remove('hidden');
+    document.getElementById('waitingOverlay').querySelector('.waiting-msg').textContent = 'HOST HAS ENDED THE SESSION';
+  });
+
+  function typewriterReveal(text) {
+    const qEl = document.getElementById('displayQuestion');
+    qEl.className = 'display-question';
+    qEl.textContent = '';
+    let i = 0;
+    if (revealInterval) clearInterval(revealInterval);
+    revealInterval = setInterval(() => {
+      qEl.textContent = text.slice(0, i + 1);
+      i++;
+      if (i >= text.length) { clearInterval(revealInterval); revealInterval = null; }
+    }, 50);
+  }
+
+  function resetQuestion() {
+    if (revealInterval) { clearInterval(revealInterval); revealInterval = null; }
+    const qEl = document.getElementById('displayQuestion');
+    qEl.className = 'display-question waiting';
+    qEl.textContent = 'Waiting for question…';
+    document.getElementById('displayAnswer').style.display = 'none';
+    document.getElementById('displayAnswerText').textContent = '';
+    resetBuzzBar();
+  }
+
+  function resetBuzzBar() {
+    const buzzBar = document.getElementById('buzzBar');
+    buzzBar.classList.remove('active');
+    buzzBar.innerHTML = '<span class="buzz-waiting-text">BUZZ IN TO ANSWER</span>';
+  }
+
+  function renderLeaderboard() {
+    const el = document.getElementById('lbList');
+    el.innerHTML = '';
+    const entries = Object.entries(scores).sort((a,b) => b[1]-a[1]);
+    const top = entries[0]?.[1];
+    const medals = ['🥇','🥈','🥉'];
+    entries.forEach(([id, pts], i) => {
+      const team   = teams.find(t => t.id === id);
+      const name   = team ? team.name   : id;
+      const colour = team ? team.colour : '#FFD93D';
+      const row = document.createElement('div');
+      row.className = 'lb-row' + (pts === top && pts > 0 ? ' top' : '');
+      row.innerHTML = `
+        <span class="lb-rank">${medals[i] || (i+1)}</span>
+        <span class="lb-dot" style="background:${colour};"></span>
+        <span class="lb-name">${name}</span>
+        <span class="lb-pts">${pts}</span>
+      `;
+      el.appendChild(row);
+    });
+  }
+
+  function showGameOver() {
+    const overlay = document.getElementById('gameoverOverlay');
+    const podium  = document.getElementById('gameoverPodium');
+    podium.innerHTML = '';
+    const entries = Object.entries(scores).sort((a,b) => b[1]-a[1]);
+    const medals  = ['🥇','🥈','🥉'];
+    entries.slice(0, 5).forEach(([id, pts], i) => {
+      const team  = teams.find(t => t.id === id);
+      const name  = team ? team.name : id;
+      const row   = document.createElement('div');
+      row.className = 'gameover-row' + (i === 0 ? ' first' : '');
+      row.style.animationDelay = `${i * 0.1}s`;
+      row.innerHTML = `
+        <span class="gameover-medal">${medals[i] || `#${i+1}`}</span>
+        <span class="gameover-name">${name}</span>
+        <span class="gameover-pts">${pts} pts</span>
+      `;
+      podium.appendChild(row);
+    });
+    overlay.classList.remove('hidden');
+  }
+
+  renderLeaderboard();
+})();
+</script>
+</body>
+</html>
