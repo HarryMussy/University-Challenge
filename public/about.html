@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About — University Challenge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .about-page {
+      min-height: 100vh;
+      background: var(--ink);
+      background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 20px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 5rem 1.5rem 4rem;
+      font-family: var(--font-body);
+    }
+
+    .about-wrap {
+      width: 100%;
+      max-width: 700px;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .about-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      text-decoration: none;
+      color: rgba(255,255,255,0.4);
+      font-weight: 800;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+      position: fixed;
+      top: 1.25rem;
+      left: 1.25rem;
+      transition: color 0.15s;
+      z-index: 10;
+    }
+    .about-back:hover { color: var(--gold); }
+
+    .about-section {
+      background: white;
+      border: 4px solid var(--ink);
+      border-radius: 16px;
+      padding: 2rem 2.25rem;
+      box-shadow: 6px 6px 0 var(--gold);
+      position: relative;
+    }
+
+    .about-section-label {
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      letter-spacing: 4px;
+      color: white;
+      background: var(--ink);
+      padding: 0.2rem 0.75rem;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 0.75rem;
+    }
+
+    .about-section-label.privacy { background: var(--blue); }
+    .about-section-label.story   { background: var(--red);  }
+    .about-section-label.contact { background: var(--green);}
+
+    .about-section h2 {
+      font-family: var(--font-display);
+      font-size: 2.2rem;
+      letter-spacing: 3px;
+      color: var(--ink);
+      line-height: 1;
+      margin-bottom: 1.25rem;
+    }
+
+    .about-section p {
+      font-size: 0.95rem;
+      color: #444;
+      font-weight: 600;
+      line-height: 1.75;
+      margin-bottom: 1rem;
+    }
+    .about-section p:last-child { margin-bottom: 0; }
+
+    .about-section ul {
+      list-style: none;
+      padding: 0;
+      margin: 0.75rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .about-section ul li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      font-size: 0.92rem;
+      color: #444;
+      font-weight: 600;
+      line-height: 1.5;
+    }
+
+    .about-section ul li::before {
+      content: '▸';
+      color: var(--red);
+      flex-shrink: 0;
+      font-size: 0.85rem;
+      margin-top: 0.1rem;
+    }
+
+    .about-quote {
+      background: var(--ink);
+      border-left: 5px solid var(--gold);
+      border-radius: 0 10px 10px 0;
+      padding: 1.25rem 1.5rem;
+      margin: 1rem 0 0;
+    }
+
+    .about-quote p {
+      color: rgba(255,255,255,0.85) !important;
+      font-style: italic;
+      font-size: 0.98rem !important;
+      line-height: 1.8 !important;
+    }
+
+    .about-quote cite {
+      display: block;
+      color: var(--gold);
+      font-family: var(--font-display);
+      font-size: 1rem;
+      letter-spacing: 1px;
+      margin-top: 0.6rem;
+      font-style: normal;
+    }
+
+    .about-contact-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+
+    .about-contact-email {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      letter-spacing: 1px;
+      color: var(--ink);
+    }
+
+    .about-badge {
+      display: inline-block;
+      background: var(--gold);
+      border: 2px solid var(--ink);
+      border-radius: 6px;
+      padding: 0.15rem 0.6rem;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--ink);
+    }
+
+    @media (max-width: 600px) {
+      .about-section { padding: 1.5rem; }
+      .about-section h2 { font-size: 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+<a href="/" class="about-back">← Home</a>
+
+<div class="about-page">
+  <div class="about-wrap">
+
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:0.5rem;">
+      <svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" style="width:140px;margin-bottom:0.75rem;">
+        <polygon points="170,6 320,52 320,118 170,154 20,118 20,52" fill="#0d0d1a" stroke="#FFD93D" stroke-width="4"/>
+        <text x="170" y="90" text-anchor="middle" font-family="Bangers,Impact,sans-serif" font-size="68" fill="#FFD93D" letter-spacing="2">UC</text>
+        <rect x="80" y="100" width="180" height="26" rx="4" fill="#FF6B6B"/>
+        <text x="170" y="119" text-anchor="middle" font-family="Bangers,Impact,sans-serif" font-size="14" fill="white" letter-spacing="3">UNIVERSITY CHALLENGE</text>
+      </svg>
+      <h1 style="font-family:var(--font-display);font-size:3rem;letter-spacing:4px;color:var(--gold);text-shadow:4px 4px 0 rgba(0,0,0,0.4);line-height:1;">ABOUT</h1>
+    </div>
+
+    <!-- About the Site -->
+    <div class="about-section">
+      <span class="about-section-label story">⚡ ORIGIN STORY</span>
+      <h2>About the Site</h2>
+      <div class="about-quote">
+        <p>The idea for the University Challenge came from an A-Level Physics lesson. My teacher played a game with the class (called the University Challenge) where our teams or "Universities" would answer questions being read aloud from a subject knowledge organiser. Unfortunately for our poor teacher, everyone in the class always argued about who said their team name first. In a throwaway comment our teacher mentioned the idea of a website based game being made to solve this problem; and the website was born.</p>
+        <cite>— Harry Muscroft</cite>
+      </div>
+    </div>
+
+    <!-- Privacy Policy -->
+    <div class="about-section">
+      <span class="about-section-label privacy">🔒 PRIVACY POLICY</span>
+      <h2>Privacy &amp; Data</h2>
+
+      <p>University Challenge is designed to be simple, private and safe to use in a school environment. Here is how data is handled:</p>
+
+      <ul>
+        <li><strong>Teacher email addresses</strong> are used solely to send a one-time verification code (OTP) and to maintain a login session. Email addresses are stored only in your browser's <code>localStorage</code> and are never sent to, or stored on, any external server beyond the email delivery service (EmailJS) used to dispatch the verification code.</li>
+        <li><strong>Verification codes</strong> expire after 10 minutes and are generated entirely in the browser — they are never logged or persisted on the server.</li>
+        <li><strong>Student names</strong> are entered voluntarily when joining a game. They are held in server memory only for the duration of the active game session and are permanently deleted when the session ends or the server restarts.</li>
+        <li><strong>Lobby and game data</strong> (room codes, question sets, scores, team names) exists only in server memory during an active session. No game data is written to disk or stored in a database. When the host ends the session or the server restarts, all data is gone.</li>
+        <li><strong>Room codes</strong> are randomly generated six-letter strings. They are not tied to any personal information and expire as soon as the session is closed.</li>
+        <li><strong>No cookies</strong> are set by this application beyond standard session storage used to track which game a student is currently in.</li>
+        <li><strong>No third-party analytics, advertising trackers, or data brokers</strong> are used anywhere on this site.</li>
+      </ul>
+
+      <p>If you have any questions about how your data is handled, or would like something removed, please get in touch using the contact details below.</p>
+    </div>
+
+    <!-- Contact -->
+    <div class="about-section">
+      <span class="about-section-label contact">✉️ CONTACT</span>
+      <h2>Get in Touch</h2>
+      <p>Questions, bug reports, feedback, or just want to say hello? Reach out directly:</p>
+      <div class="about-contact-row">
+        <span class="about-contact-email">harrymuscroft0@icloud.com</span>
+        <span class="about-badge">DEVELOPER</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

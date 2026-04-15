@@ -32,6 +32,7 @@ app.get('/teacher-lobby', (req, res) => res.sendFile(path.join(__dirname, 'publi
 app.get('/teacher-game', (req, res) => res.sendFile(path.join(__dirname, 'public', 'teacher-game.html')));
 app.get('/student-game', (req, res) => res.sendFile(path.join(__dirname, 'public', 'student-game.html')));
 app.get('/how-to-play', (req, res) => res.sendFile(path.join(__dirname, 'public', 'how-to-play.html')));
+app.get('/about', (req, res) => res.sendFile(path.join(__dirname, 'public', 'about.html')));
 app.get('/results', (req, res) => res.sendFile(path.join(__dirname, 'public', 'results.html')));
 
 // ── Room state store ──────────────────────────────────────────────────────────
