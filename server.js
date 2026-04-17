@@ -30,8 +30,10 @@ app.get('/join', (req, res) => res.sendFile(path.join(__dirname, 'public', 'join
 app.get('/student-lobby', (req, res) => res.sendFile(path.join(__dirname, 'public', 'student-lobby.html')));
 app.get('/teacher-lobby', (req, res) => res.sendFile(path.join(__dirname, 'public', 'teacher-lobby.html')));
 app.get('/teacher-game', (req, res) => res.sendFile(path.join(__dirname, 'public', 'teacher-game.html')));
+app.get('/teacher-display', (req, res) => res.sendFile(path.join(__dirname, 'public', 'teacher-display.html')));
 app.get('/student-game', (req, res) => res.sendFile(path.join(__dirname, 'public', 'student-game.html')));
 app.get('/how-to-play', (req, res) => res.sendFile(path.join(__dirname, 'public', 'how-to-play.html')));
+app.get('/about', (req, res) => res.sendFile(path.join(__dirname, 'public', 'about.html')));
 app.get('/results', (req, res) => res.sendFile(path.join(__dirname, 'public', 'results.html')));
 
 // ── Room state store ──────────────────────────────────────────────────────────
@@ -48,6 +50,7 @@ function getRoom(code) {
     currentQ: 0,
     gameActive: false,
     buzzed: false,
+    displaySockets: new Set(), // passive display observers
   };
   return rooms[code];
 }
@@ -69,6 +72,7 @@ io.on('connection', (socket) => {
       if (gameMode === 'teams') teams.forEach(t => r.scores[t.id] = 0);
     }
     if (!r.players) r.players = {};
+    if (!r.displaySockets) r.displaySockets = new Set();
     socket.join(room);
     socket.room = room;
     socket.role = 'host';
@@ -98,6 +102,39 @@ io.on('connection', (socket) => {
     });
   });
 
+  // DISPLAY joins as passive observer (teacher-display.html)
+  socket.on('display-join', ({ room }) => {
+    const r = rooms[room];
+    if (!r) {
+      socket.emit('join-error', { message: 'Room not found.' });
+      return;
+    }
+    if (!r.displaySockets) r.displaySockets = new Set();
+    r.displaySockets.add(socket.id);
+    socket.join(room);
+    socket.room  = room;
+    socket.role  = 'display';
+    console.log(`[DISPLAY] joined room ${room}`);
+    // Send current state so display can initialise
+    socket.emit('display-joined', {
+      teams:    r.teams,
+      scores:   r.scores,
+      gameMode: r.gameMode,
+      gameActive: r.gameActive,
+      currentQ: r.currentQ,
+    });
+    // If game already started, tell the display
+    if (r.gameActive) {
+      socket.emit('game-started', {
+        gameMode:  r.gameMode,
+        teams:     r.teams,
+        scores:    r.scores,
+        questions: [], // display doesn't need question text ahead of time
+        currentQ:  r.currentQ,
+      });
+    }
+  });
+
   // HOST changes game mode
   socket.on('host-change-mode', ({ room, gameMode }) => {
     const r = rooms[room];
@@ -123,17 +160,12 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // FIX: Only block joining if lobby (pre-game) and host is gone.
-    // During an active game, allow rejoins even if hostSocketId is temporarily null
-    // (host may be mid-page-navigation).
     if (!r.gameActive && !r.hostSocketId) {
       socket.emit('join-error', { message: 'Host connection lost. Please wait.' });
       return;
     }
 
-    // Remove stale entries for this player name (handles page refreshes / mobile reconnects).
-    // Emit player-left for the old socket ID FIRST so the host removes the ghost
-    // before seeing the new player-joined, preventing duplicates in the lobby list.
+    // Remove stale entries for this player name
     for (let sid in r.players) {
       if (r.players[sid].name === name) {
         delete r.players[sid];
@@ -200,8 +232,8 @@ io.on('connection', (socket) => {
     if (!r) return;
     const q = r.questions[r.currentQ];
     if (!q) return;
-    // FIX: Reset buzz state when a new question is revealed
     r.buzzed = false;
+    // Send full text to students and display
     socket.to(room).emit('question-revealed', { text: q.text, index: r.currentQ });
   });
 
@@ -236,13 +268,13 @@ io.on('connection', (socket) => {
     }
 
     if (!correct) {
-      // Re-add question for later; keep buzz locked — teacher must click Next
       r.questions.push(q);
-      // Notify everyone of the updated question order
       io.to(room).emit('question-order-updated', { questions: r.questions, currentQ: r.currentQ });
     }
 
-    io.to(room).emit('answer-result', { correct, points: pts, buzzedBy: buzzedName });
+    // For display: include the answer text when correct so it can be shown
+    const answerText = correct ? q.answer : null;
+    io.to(room).emit('answer-result', { correct, points: pts, buzzedBy: buzzedName, answerText });
     io.to(room).emit('score-update', { scores: r.scores });
   });
 
@@ -315,9 +347,7 @@ io.on('connection', (socket) => {
     if (!r) return;
     const playerData = r.players[playerId];
     const playerName = playerData?.name || 'Unknown';
-    // Remove from players
     delete r.players[playerId];
-    // Remove from scores so kicked player doesn't appear on leaderboard
     if (r.gameMode === 'solo') {
       delete r.scores[playerName];
     }
@@ -339,21 +369,20 @@ io.on('connection', (socket) => {
     if (socket.room) {
       const r = rooms[socket.room];
       if (r) {
-        if (socket.role === 'host' && socket.id === r.hostSocketId) {
+        if (socket.role === 'display') {
+          // Just remove from display set — no impact on game
+          if (r.displaySockets) r.displaySockets.delete(socket.id);
+        } else if (socket.role === 'host' && socket.id === r.hostSocketId) {
           r.hostSocketId = null;
           console.log(`[HOST DISCONNECT] Host disconnected from room ${socket.room}`);
-          // FIX: Don't destroy the room immediately — give the host time to reconnect
-          // (they're navigating from teacher-lobby to teacher-game).
-          // Only destroy if game is not active after a grace period.
           setTimeout(() => {
             const stillExists = rooms[socket.room];
             if (stillExists && !stillExists.hostSocketId) {
-              // Host never reconnected — notify students and clean up
               io.to(socket.room).emit('host-left');
               delete rooms[socket.room];
               console.log(`[ROOM DESTROYED] Room ${socket.room} destroyed after grace period`);
             }
-          }, 5000); // 5 second grace period for page navigation
+          }, 5000);
         } else if (socket.role === 'student') {
           delete r.players[socket.id];
           if (r.hostSocketId) {
