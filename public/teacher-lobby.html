@@ -241,12 +241,16 @@
   }
 
   // ── Create Room ──
-  $('createRoomBtn').onclick = createRoom;
+  $('createRoomBtn').onclick = () => createRoom();
 
   function createRoom(preferredRoomCode) {
     if (typeof io === 'undefined') { alert('Socket.io not loaded. Please refresh.'); return; }
     buildTeams();
-    currentRoom = preferredRoomCode || makeRoomCode();
+    const validPreferredCode =
+      typeof preferredRoomCode === 'string' && /^[A-Z]{6}$/.test(preferredRoomCode)
+        ? preferredRoomCode
+        : null;
+    currentRoom = validPreferredCode || makeRoomCode();
     players = {};
 
     socket = io();
