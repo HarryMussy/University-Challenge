@@ -170,6 +170,17 @@
     <p id="questionText" class="host-question-text" style="color:rgba(255,255,255,0.3);font-style:italic;">
       Waiting for game to start…
     </p>
+    <!-- Teacher-only: Always show current question and answer during gameplay -->
+    <div id="teacherQAContainer" class="host-answer-reveal hidden" style="margin-bottom:1rem;background:rgba(107,207,127,0.08);border:1.5px solid rgba(107,207,127,0.3);border-radius:10px;padding:1rem;">
+      <div style="margin-bottom:0.5rem;">
+        <span class="ar-label" style="color:rgba(255,217,61,0.8);margin-right:0.5em;">Question</span>
+        <span id="teacherQuestionText" class="ar-answer" style="color:white;"></span>
+      </div>
+      <div>
+        <span class="ar-label" style="color:rgba(107,207,127,0.8);margin-right:0.5em;">Answer</span>
+        <span id="teacherAnswerText" class="ar-answer" style="color:white;"></span>
+      </div>
+    </div>
     <div id="answerReveal" class="host-answer-reveal hidden">
       <span class="ar-label">Correct Answer</span>
       <span id="correctAnswerDisplay" class="ar-answer"></span>
@@ -303,6 +314,17 @@
     $('questionText').textContent = 'Press "Reveal Question" to show the question';
     $('questionText').style.color = 'rgba(255,255,255,0.3)';
     $('questionText').style.fontStyle = 'italic';
+    // Show teacher Q&A
+    const currentQuestion = questions[currentQ];
+    if (currentQuestion) {
+      $('teacherQuestionText').textContent = currentQuestion.text;
+      $('teacherAnswerText').textContent = currentQuestion.answer;
+      $('teacherQAContainer').classList.remove('hidden');
+    } else {
+      $('teacherQuestionText').textContent = '';
+      $('teacherAnswerText').textContent = '';
+      $('teacherQAContainer').classList.add('hidden');
+    }
     $('answerReveal').classList.add('hidden');
     $('correctAnswerDisplay').textContent = '';
     $('buzzStatusBox').innerHTML = '<span class="buzz-waiting">Waiting for buzz…</span>';

@@ -16,7 +16,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 5rem 1.5rem 4rem;
+      padding: 4rem 1rem 2.5rem;
       font-family: var(--font-body);
     }
 
@@ -35,29 +35,33 @@
       text-decoration: none;
       color: rgba(255,255,255,0.4);
       font-weight: 800;
-      font-size: 0.85rem;
+      font-size: 1rem;
       letter-spacing: 0.5px;
       position: fixed;
-      top: 1.25rem;
-      left: 1.25rem;
-      transition: color 0.15s;
+      top: 1rem;
+      left: 1rem;
+      padding: 0.4rem 0.8rem;
+      background: rgba(0,0,0,0.12);
+      border-radius: 8px;
+      transition: color 0.15s, background 0.15s;
       z-index: 10;
     }
-    .about-back:hover { color: var(--gold); }
+    .about-back:hover { color: var(--gold); background: rgba(255,217,61,0.08); }
 
     .about-section {
       background: white;
-      border: 4px solid var(--ink);
+      border: 3px solid var(--ink);
       border-radius: 16px;
-      padding: 2rem 2.25rem;
-      box-shadow: 6px 6px 0 var(--gold);
+      padding: 2rem 2rem;
+      box-shadow: 4px 4px 0 var(--gold);
       position: relative;
+      margin-bottom: 0.5rem;
     }
 
     .about-section-label {
       font-family: var(--font-display);
-      font-size: 0.85rem;
-      letter-spacing: 4px;
+      font-size: 0.9rem;
+      letter-spacing: 3px;
       color: white;
       background: var(--ink);
       padding: 0.2rem 0.75rem;
@@ -72,18 +76,18 @@
 
     .about-section h2 {
       font-family: var(--font-display);
-      font-size: 2.2rem;
-      letter-spacing: 3px;
+      font-size: 2rem;
+      letter-spacing: 2px;
       color: var(--ink);
-      line-height: 1;
-      margin-bottom: 1.25rem;
+      line-height: 1.1;
+      margin-bottom: 1.1rem;
     }
 
     .about-section p {
-      font-size: 0.95rem;
-      color: #444;
-      font-weight: 600;
-      line-height: 1.75;
+      font-size: 1rem;
+      color: #333;
+      font-weight: 500;
+      line-height: 1.7;
       margin-bottom: 1rem;
     }
     .about-section p:last-child { margin-bottom: 0; }
@@ -94,24 +98,24 @@
       margin: 0.75rem 0;
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 0.7rem;
     }
 
     .about-section ul li {
       display: flex;
       align-items: flex-start;
-      gap: 0.6rem;
-      font-size: 0.92rem;
+      gap: 0.7rem;
+      font-size: 0.98rem;
       color: #444;
-      font-weight: 600;
-      line-height: 1.5;
+      font-weight: 500;
+      line-height: 1.6;
     }
 
     .about-section ul li::before {
       content: '▸';
       color: var(--red);
       flex-shrink: 0;
-      font-size: 0.85rem;
+      font-size: 1rem;
       margin-top: 0.1rem;
     }
 
@@ -119,14 +123,14 @@
       background: var(--ink);
       border-left: 5px solid var(--gold);
       border-radius: 0 10px 10px 0;
-      padding: 1.25rem 1.5rem;
+      padding: 1.1rem 1.1rem;
       margin: 1rem 0 0;
     }
 
     .about-quote p {
-      color: rgba(255,255,255,0.85) !important;
+      color: rgba(255,255,255,0.92) !important;
       font-style: italic;
-      font-size: 0.98rem !important;
+      font-size: 1.05rem !important;
       line-height: 1.8 !important;
     }
 
@@ -150,9 +154,10 @@
 
     .about-contact-email {
       font-family: var(--font-display);
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       letter-spacing: 1px;
       color: var(--ink);
+      word-break: break-all;
     }
 
     .about-badge {
@@ -161,15 +166,61 @@
       border: 2px solid var(--ink);
       border-radius: 6px;
       padding: 0.15rem 0.6rem;
-      font-size: 0.78rem;
+      font-size: 0.8rem;
       font-weight: 800;
       letter-spacing: 1px;
       color: var(--ink);
     }
 
-    @media (max-width: 600px) {
-      .about-section { padding: 1.5rem; }
-      .about-section h2 { font-size: 1.8rem; }
+    @media (max-width: 700px) {
+      .about-wrap {
+        max-width: 98vw;
+        gap: 1.2rem;
+      }
+      .about-section {
+        padding: 1.2rem 0.7rem;
+        border-width: 2px;
+        box-shadow: 2px 2px 0 var(--gold);
+      }
+      .about-section h2 {
+        font-size: 1.25rem;
+        margin-bottom: 0.7rem;
+      }
+      .about-section-label {
+        font-size: 0.8rem;
+        letter-spacing: 2px;
+      }
+      .about-quote {
+        padding: 0.7rem 0.7rem;
+      }
+      .about-back {
+        font-size: 0.95rem;
+        padding: 0.3rem 0.6rem;
+        top: 0.5rem;
+        left: 0.5rem;
+      }
+      .about-page {
+        padding: 2.5rem 0.2rem 1.5rem;
+      }
+      .about-contact-email {
+        font-size: 0.98rem;
+      }
+    }
+    @media (max-width: 400px) {
+      .about-section {
+        padding: 0.7rem 0.2rem;
+      }
+      .about-section h2 {
+        font-size: 1.05rem;
+      }
+      .about-quote {
+        padding: 0.4rem 0.3rem;
+      }
+    }
+    /* Make SVG logo scale responsively */
+    .about-wrap svg {
+      max-width: 90vw;
+      height: auto;
     }
   </style>
 </head>
@@ -195,7 +246,7 @@
       <span class="about-section-label story">⚡ ORIGIN STORY</span>
       <h2>About the Site</h2>
       <div class="about-quote">
-        <p>The idea for the UniMinds Arena came from an A-Level Physics lesson. My teacher played a game with the class (called the University Challenge) where our teams or "Universities" would answer questions being read aloud from a subject knowledge organiser. Unfortunately for our poor teacher, everyone in the class always argued about who said their team name first. In a throwaway comment our teacher mentioned the idea of a website based game being made to solve this problem; and the website was born.</p>
+        <p>The idea for UniMinds Arena came from an A-Level Physics lesson. My teacher played a game with the class (called "University Challenge") where our teams or "Universities" would answer questions being read aloud from a subject knowledge organiser. Unfortunately for our poor teacher, everyone in the class always argued about who said their team name first. In a throwaway comment our teacher mentioned the idea of a website-based game being made to solve this problem; and the website was born.</p>
         <cite>— Harry Muscroft</cite>
       </div>
     </div>
