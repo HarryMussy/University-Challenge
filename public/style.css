@@ -307,12 +307,17 @@ body { font-family: var(--font-body); background: var(--ink); min-height: 100vh;
 }
 .footer-email a {
   color: var(--red);
-  text-decoration: underline wavy 2px;
+  text-decoration: none;
   font-weight: bold;
   transition: color 0.15s;
 }
 .footer-email a:hover {
   color: var(--blue);
+  text-decoration: none;
+}
+.footer-email a:visited,
+.footer-email a:active {
+  text-decoration: none;
 }
 
 .footer-about-btn {
@@ -330,18 +335,24 @@ body { font-family: var(--font-body); background: var(--ink); min-height: 100vh;
   box-shadow: 3px 3px 0 var(--red);
   cursor: pointer;
   transition: background 0.12s, color 0.12s, box-shadow 0.12s, transform 0.12s;
+  text-decoration: none;
 }
 .footer-about-btn:hover {
   background: var(--red);
   color: white;
   box-shadow: 5px 5px 0 var(--ink);
   transform: translate(-1px,-1px);
+  text-decoration: none;
 }
 .footer-about-btn:active {
   background: var(--gold);
   color: var(--ink);
   box-shadow: 1px 1px 0 var(--ink);
   transform: translate(1px,1px);
+  text-decoration: none;
+}
+.footer-about-btn:visited {
+  text-decoration: none;
 }
 .footer-btn-icon {
   display: flex;
@@ -349,7 +360,4 @@ body { font-family: var(--font-body); background: var(--ink); min-height: 100vh;
   justify-content: center;
   margin-right: 0.3em;
   transition: filter 0.12s;
-}
-.footer-about-btn:hover .footer-btn-icon img {
-  filter: brightness(0) saturate(100%) invert(18%) sepia(99%) saturate(7472%) hue-rotate(356deg) brightness(97%) contrast(108%);
 }

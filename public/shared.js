@@ -1,7 +1,8 @@
 // ── Shared config across all pages ──────────────────
 const EMAILJS_CONFIG = {
   publicKey:  '7Umbf9uCGy2Ssvs4O',
-  serviceId:  'service_f64lhzl',
+  serviceIdOutook:  'service_f64lhzl',
+  serviceIdGmail: 'service_kuixajo',
   templateId: 'template_n8yatli',
 };
 

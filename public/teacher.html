@@ -15,7 +15,7 @@
 <div id="loginPage" class="page page-dark">
   <div class="panel">
     <div class="panel-header">
-      <img src="images/teacher-cap-solid.svg" alt="Teacher cap icon" width="60" style="display:block;margin:0 auto 1em auto;">
+      <span aria-hidden="true" style="display:block;margin:0 auto 1em auto;font-size:3rem;line-height:1;">💼</span>
       <h1>Teacher Login</h1>
     </div>
 
@@ -160,7 +160,12 @@
       setStatus('loginStatus', `[Dev mode] Code logged to console (F12)`, 'info');
       return;
     }
-    await emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.templateId, {
+    const isGmail = email.endsWith('@gmail.com');
+    const serviceId = isGmail
+      ? (EMAILJS_CONFIG.serviceIdGmail || EMAILJS_CONFIG.serviceId)
+      : (EMAILJS_CONFIG.serviceIdOutook || EMAILJS_CONFIG.serviceIdOutlook || EMAILJS_CONFIG.serviceId);
+
+    await emailjs.send(serviceId, EMAILJS_CONFIG.templateId, {
       to_email: email, otp_code: otp, name: email.split('@')[0]
     });
   }
