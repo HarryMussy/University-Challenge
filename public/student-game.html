@@ -43,6 +43,7 @@
             let myBuzzed = false;
             let studentReady = false;
             let revealInterval = null;
+            let endOverlay = null;
 
             // Set team display
             const myTeam = teams && teams.find(t => t.id === myTeamId);
@@ -62,6 +63,28 @@
                 studentReady = true;
             });
 
+            socket.on('game-started', data => {
+                // Host restarted a game while students stayed connected.
+                if (data && data.scores) scores = { ...data.scores };
+                if (endOverlay) {
+                    endOverlay.remove();
+                    endOverlay = null;
+                }
+                const studentView = document.querySelector('.student-view');
+                if (studentView) {
+                    studentView.style.opacity = '1';
+                    studentView.style.pointerEvents = 'auto';
+                }
+                $('questionText').textContent = 'Waiting for question…';
+                $('questionText').style.color = 'rgba(255,255,255,0.4)';
+                $('questionText').style.fontStyle = 'italic';
+                $('buzzButton').disabled = true;
+                $('buzzedIndicator').classList.add('hidden');
+                $('resultMessage').classList.add('hidden');
+                myBuzzed = false;
+                updateScore();
+            });
+
             // Keep a local copy of the question order — purely for display/tracking
             // (students don't need to act on it, but having it means future features are easy)
             socket.on('question-order-updated', data => {
@@ -76,6 +99,15 @@
             });
 
             socket.on('question-revealed', data => {
+                if (endOverlay) {
+                    endOverlay.remove();
+                    endOverlay = null;
+                }
+                const studentView = document.querySelector('.student-view');
+                if (studentView) {
+                    studentView.style.opacity = '1';
+                    studentView.style.pointerEvents = 'auto';
+                }
                 if (revealInterval) clearInterval(revealInterval);
                 const text = data.text;
                 let i = 0;
@@ -152,7 +184,7 @@
                 studentView.style.opacity = '0.5';
                 studentView.style.pointerEvents = 'none';
 
-                const endOverlay = document.createElement('div');
+                    endOverlay = document.createElement('div');
                 endOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;z-index:1000;font-family:Bangers,Impact,sans-serif;';
                 endOverlay.innerHTML = `
           <h1 style="font-size:3rem;margin-bottom:2rem;color:#FFD93D;">Game Over!</h1>
@@ -165,8 +197,10 @@
 
             socket.on('game-reset', data => {
                 scores = { ...data.scores };
-                const overlay = document.querySelector('[style*="position:fixed"]');
-                if (overlay) overlay.remove();
+                if (endOverlay) {
+                    endOverlay.remove();
+                    endOverlay = null;
+                }
                 const studentView = document.querySelector('.student-view');
                 if (studentView) {
                     studentView.style.opacity = '1';
@@ -179,10 +213,7 @@
                 $('buzzedIndicator').classList.add('hidden');
                 $('resultMessage').classList.add('hidden');
                 myBuzzed = false;
-
-                Session.saveStudent({ name, room, gameMode: data.gameMode, teams: data.teams });
-                Session.clearGame();
-                window.location.href = '/student-lobby';
+                updateScore();
             });
 
             socket.on('host-disconnected', () => {
