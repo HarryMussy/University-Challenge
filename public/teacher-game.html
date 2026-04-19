@@ -508,12 +508,15 @@
     document.body.appendChild(endOverlay);
 
     $('playAgainBtn').onclick = () => {
-      endOverlay.remove();
-      hostView.style.display = '';
-      currentQ = 0;
-      scores = {};
-      if (gameMode === 'teams') teams.forEach(t => scores[t.id] = 0);
-      socket.emit('host-reset-game', { room, questions });
+      // Persist room setup so teacher-lobby can recreate the same room code.
+      Session.saveRoom({
+        room,
+        teams,
+        gameMode,
+        questions: roomData.questions || questions,
+        scores: Object.fromEntries((teams || []).map(t => [t.id, 0]))
+      });
+      window.location.href = '/teacher-lobby';
     };
 
     $('viewResultsBtn').onclick = () => { window.location.href = '/results'; };
