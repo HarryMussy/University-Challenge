@@ -201,7 +201,7 @@
   const roomData = Session.getRoom();
   if (!roomData) { window.location.href = '/teacher-lobby'; return; }
 
-  const { room, teams, gameMode } = roomData;
+  const { room, teams, gameMode, settings } = roomData;
   let questions = roomData.questions || [];
   let scores = roomData.scores || {};
   let currentQ = 0;
@@ -251,7 +251,7 @@
 
   socket.on('connect', () => {
     console.log('[TEACHER GAME] connected:', socket.id);
-    socket.emit('host-create', { room, teams, gameMode, questions });
+    socket.emit('host-create', { room, teams, gameMode, questions, settings });
   });
 
   socket.on('host-room-created', () => {
@@ -513,6 +513,7 @@
         room,
         teams,
         gameMode,
+        settings,
         questions: roomData.questions || questions,
         scores: Object.fromEntries((teams || []).map(t => [t.id, 0]))
       });
