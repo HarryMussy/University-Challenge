@@ -80,9 +80,33 @@
       <div id="questionsPreview" class="q-preview hidden"></div>
     </div>
 
-    <!-- Card 3: Lobby -->
+    <!-- Card 3: Game Settings -->
     <div class="dash-card dash-card-full">
       <div class="card-step">03</div>
+      <h2 class="card-title">Game Settings</h2>
+      <div class="settings-group">
+        <label class="settings-checkbox">
+          <input type="checkbox" id="showAnswerOnCorrect" checked>
+          <span class="checkbox-label">Show correct answer after student answers correctly</span>
+        </label>
+        <label class="settings-checkbox">
+          <input type="checkbox" id="showAnswerOnIncorrect">
+          <span class="checkbox-label">Show correct answer after student answers incorrectly</span>
+        </label>
+        <label class="settings-checkbox">
+          <input type="checkbox" id="deductPointsOnIncorrect">
+          <span class="checkbox-label">Deduct 1 point for answering incorrectly</span>
+        </label>
+        <label class="settings-checkbox">
+          <input type="checkbox" id="reaskIncorrectQuestions" checked>
+          <span class="checkbox-label">Ask incorrectly answered questions again</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Card 4: Lobby -->
+    <div class="dash-card dash-card-full">
+      <div class="card-step">04</div>
       <h2 class="card-title">Lobby</h2>
       <button id="createRoomBtn" class="btn btn-primary">Create Room</button>
       <div id="lobbyInfo" class="lobby-info hidden">
@@ -119,9 +143,38 @@
   let players    = {};  // socketId -> { name, teamId }
   let currentRoom = null;
   let socket     = null;
+  let settings   = {
+    showAnswerOnCorrect: true,
+    showAnswerOnIncorrect: false,
+    deductPointsOnIncorrect: false,
+    reaskIncorrectQuestions: true,
+  };
 
   // ── Logout ──
   $('logoutBtn').onclick = () => { Session.clearTeacher(); window.location.href = '/'; };
+
+  // ── Settings ──
+  function collectSettings() {
+    settings = {
+      showAnswerOnCorrect: $('showAnswerOnCorrect').checked,
+      showAnswerOnIncorrect: $('showAnswerOnIncorrect').checked,
+      deductPointsOnIncorrect: $('deductPointsOnIncorrect').checked,
+      reaskIncorrectQuestions: $('reaskIncorrectQuestions').checked,
+    };
+    return settings;
+  }
+
+  // Listen to settings changes
+  ['showAnswerOnCorrect', 'showAnswerOnIncorrect', 'deductPointsOnIncorrect', 'reaskIncorrectQuestions'].forEach(id => {
+    const el = $(id);
+    if (el) el.onchange = () => {
+      collectSettings();
+      // If room is active, broadcast settings update
+      if (socket && currentRoom) {
+        socket.emit('host-update-teams', { room: currentRoom, teams, gameMode, settings });
+      }
+    };
+  });
 
   // ── Mode ──
   $('teamModeBtn').onclick = () => setMode('teams');
@@ -139,8 +192,8 @@
   }
 
   // ── Team count ──
-  $('teamCountMinus').onclick = () => { teamCount = Math.max(2, teamCount - 1); $('teamCountDisplay').textContent = teamCount; buildTeamInputs(); };
-  $('teamCountPlus').onclick  = () => { teamCount = Math.min(8, teamCount + 1); $('teamCountDisplay').textContent = teamCount; buildTeamInputs(); };
+  $('teamCountMinus').onclick = () => { teamCount = Math.max(2, teamCount - 1); $('teamCountDisplay').textContent = teamCount; buildTeamInputs(); updateTeamsOnServer(); };
+  $('teamCountPlus').onclick  = () => { teamCount = Math.min(8, teamCount + 1); $('teamCountDisplay').textContent = teamCount; buildTeamInputs(); updateTeamsOnServer(); };
 
   function buildTeamInputs() {
     const defaults = ['Team Alpha','Team Beta','Team Gamma','Team Delta','Team Epsilon','Team Zeta','Team Eta','Team Theta'];
@@ -150,6 +203,7 @@
       const dot = document.createElement('span'); dot.className = 'team-color-dot'; dot.style.background = TEAM_COLOURS[i];
       const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'team-name-input';
       inp.value = defaults[i] || `Team ${i+1}`; inp.dataset.i = i;
+      inp.onchange = () => updateTeamsOnServer();
       row.appendChild(dot); row.appendChild(inp); c.appendChild(row);
     }
   }
@@ -159,6 +213,14 @@
     teams = Array.from($$('.team-name-input')).map((inp, i) => ({
       id: `team_${i}`, name: inp.value.trim() || `Team ${i+1}`, colour: TEAM_COLOURS[i]
     }));
+  }
+
+  function updateTeamsOnServer() {
+    buildTeams();
+    // If room is active, broadcast teams update
+    if (socket && currentRoom) {
+      socket.emit('host-update-teams', { room: currentRoom, teams, gameMode, settings });
+    }
   }
 
   function applySavedLobbyState(saved) {
@@ -246,6 +308,7 @@
   function createRoom(preferredRoomCode) {
     if (typeof io === 'undefined') { alert('Socket.io not loaded. Please refresh.'); return; }
     buildTeams();
+    collectSettings();
     const validPreferredCode =
       typeof preferredRoomCode === 'string' && /^[A-Z]{6}$/.test(preferredRoomCode)
         ? preferredRoomCode
@@ -260,7 +323,8 @@
         room: currentRoom,
         teams,
         gameMode,
-        questions
+        questions,
+        settings
       });
     });
 

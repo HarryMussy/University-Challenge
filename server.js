@@ -51,6 +51,15 @@ function getRoom(code) {
     gameActive: false,
     buzzed: false,
     displaySockets: new Set(), // passive display observers
+    // Game settings
+    settings: {
+      showAnswerOnCorrect: true,
+      showAnswerOnIncorrect: false,
+      deductPointsOnIncorrect: false,
+      reaskIncorrectQuestions: true,
+    },
+    // Track which questions were answered incorrectly for re-asking
+    incorrectlyAnswered: new Set(),
   };
   return rooms[code];
 }
@@ -60,16 +69,18 @@ io.on('connection', (socket) => {
   console.log('Connected:', socket.id);
 
   // HOST creates room (also called when teacher-game page reconnects)
-  socket.on('host-create', ({ room, teams, gameMode, questions }) => {
+  socket.on('host-create', ({ room, teams, gameMode, questions, settings }) => {
     const r = getRoom(room);
     r.hostSocketId = socket.id;
     r.teams = teams;
     r.gameMode = gameMode;
+    if (settings) r.settings = { ...r.settings, ...settings };
     // Only reset questions/scores if the game hasn't started yet
     if (!r.gameActive) {
       r.questions = questions;
       r.scores = {};
       if (gameMode === 'teams') teams.forEach(t => r.scores[t.id] = 0);
+      r.incorrectlyAnswered = new Set(); // Reset incorrectly answered tracking
     }
     if (!r.players) r.players = {};
     if (!r.displaySockets) r.displaySockets = new Set();
@@ -77,7 +88,7 @@ io.on('connection', (socket) => {
     socket.room = room;
     socket.role = 'host';
     console.log(`Host created/re-joined room ${room} (gameActive: ${r.gameActive})`);
-    socket.emit('host-room-created', { room });
+    socket.emit('host-room-created', { room, settings: r.settings });
 
     // If game is already active (host navigated lobby→game), re-send the
     // current question list so teacher-game.html can initialise properly.
@@ -135,6 +146,17 @@ io.on('connection', (socket) => {
     }
   });
 
+  // HOST updates teams (e.g., changes team names or count after room creation)
+  socket.on('host-update-teams', ({ room, teams, gameMode, settings }) => {
+    const r = rooms[room];
+    if (!r || socket.id !== r.hostSocketId) return;
+    r.teams = teams;
+    r.gameMode = gameMode;
+    if (settings) r.settings = { ...r.settings, ...settings };
+    // Broadcast to all students in the room
+    io.to(room).emit('room-info', { teams: r.teams, gameMode: r.gameMode, settings: r.settings });
+  });
+
   // HOST changes game mode
   socket.on('host-change-mode', ({ room, gameMode }) => {
     const r = rooms[room];
@@ -188,7 +210,7 @@ io.on('connection', (socket) => {
     socket.playerName = name;
     console.log(`${name} joined room ${room} (gameActive: ${r.gameActive})`);
 
-    socket.emit('room-info', { teams: r.teams, gameMode: r.gameMode });
+    socket.emit('room-info', { teams: r.teams, gameMode: r.gameMode, settings: r.settings });
 
     if (r.hostSocketId) {
       io.to(r.hostSocketId).emit('player-joined', {
@@ -259,7 +281,18 @@ io.on('connection', (socket) => {
     const r = rooms[room];
     if (!r) return;
     const q = r.questions[r.currentQ];
-    const pts = correct ? q.points : -1;
+    
+    // Determine points based on settings
+    let pts = 0;
+    if (correct) {
+      pts = q.points;
+      // Mark this question as correctly answered (remove from incorrectly answered set)
+      r.incorrectlyAnswered.delete(r.currentQ);
+    } else {
+      pts = r.settings.deductPointsOnIncorrect ? -1 : 0;
+      // Mark this question as incorrectly answered
+      r.incorrectlyAnswered.add(r.currentQ);
+    }
 
     if (r.gameMode === 'teams' && buzzedTeamId) {
       r.scores[buzzedTeamId] = (r.scores[buzzedTeamId] || 0) + pts;
@@ -267,13 +300,20 @@ io.on('connection', (socket) => {
       r.scores[buzzedName] = (r.scores[buzzedName] || 0) + pts;
     }
 
-    if (!correct) {
+    // Re-queue question if answered incorrectly AND the setting is enabled
+    if (!correct && r.settings.reaskIncorrectQuestions) {
       r.questions.push(q);
       io.to(room).emit('question-order-updated', { questions: r.questions, currentQ: r.currentQ });
     }
 
-    // For display: include the answer text when correct so it can be shown
-    const answerText = correct ? q.answer : null;
+    // Determine which answer text to show based on settings
+    let answerText = null;
+    if (correct && r.settings.showAnswerOnCorrect) {
+      answerText = q.answer;
+    } else if (!correct && r.settings.showAnswerOnIncorrect) {
+      answerText = q.answer;
+    }
+
     io.to(room).emit('answer-result', { correct, points: pts, buzzedBy: buzzedName, answerText });
     io.to(room).emit('score-update', { scores: r.scores });
   });
