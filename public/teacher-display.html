@@ -547,8 +547,9 @@
       existing.appendChild(resultSpan);
     }
 
-    if (data.correct) {
-      // Reveal answer on display
+    // Show answer if it was provided by server (based on settings)
+    if (data.answerText) {
+      document.getElementById('displayAnswerText').textContent = data.answerText;
       document.getElementById('displayAnswer').style.display = '';
     }
   });
