@@ -154,8 +154,8 @@ body { font-family: var(--font-body); background: var(--ink); min-height: 100vh;
 .q-preview { margin-top: 1rem; max-height: 180px; overflow-y: auto; border: 2px solid var(--ink); border-radius: 8px; background: var(--panel2); }
 .q-preview-row { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.85rem; border-bottom: 1px solid rgba(0,0,0,0.08); }
 .q-preview-row:last-child { border-bottom: none; }
-.q-preview-q { font-weight: 600; color: var(--ink); }
-.q-preview-a { font-weight: 700; color: var(--red); white-space: nowrap; }
+.q-preview-q { font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.q-preview-a { font-weight: 700; color: var(--red); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 100px; }
 
 /* ── Lobby ───────────────────────────────────── */
 .lobby-info { margin-top: 1.25rem; }
