@@ -118,6 +118,34 @@
       white-space: nowrap;
     }
     .display-link-btn:hover { opacity: 0.85; }
+
+    /* ── End game button (bottom right) ── */
+    .end-game-button-wrapper {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 100;
+    }
+    .end-game-btn {
+      background: #e74c3c;
+      color: white;
+      border: 3px solid white;
+      border-radius: 10px;
+      padding: 0.75rem 1.5rem;
+      font-weight: 800;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 4px 4px 0 rgba(0,0,0,0.3);
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .end-game-btn:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0 rgba(0,0,0,0.3);
+    }
+    .end-game-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+    }
   </style>
 </head>
 <body style="background:#1a1a2e;">
@@ -126,6 +154,11 @@
 <audio id="correctSound"   src="sounds/correct.mp3"   preload="auto"></audio>
 <audio id="incorrectSound" src="sounds/incorrect.mp3" preload="auto"></audio>
 <audio id="tenseMusic"     src="sounds/tense.mp3"     loop preload="auto"></audio>
+
+<!-- End game button -->
+<div class="end-game-button-wrapper">
+  <button id="endGameBtn" class="end-game-btn" title="End game early">🛑 End Game</button>
+</div>
 
 <div class="host-view">
   <!-- ── Sidebar ── -->
@@ -449,6 +482,14 @@
     socket.emit('host-next-question', { room });
     try { $('tenseMusic').pause(); $('tenseMusic').currentTime = 0; } catch(e) {}
     displayQuestion();
+  };
+
+  $('endGameBtn').onclick = () => {
+    if (confirm('Are you sure you want to end the game early?')) {
+      if (revealInterval) { clearInterval(revealInterval); revealInterval = null; }
+      try { speechSynthesis.cancel(); currentUtterance = null; } catch(e) {}
+      endGame();
+    }
   };
 
   function renderScores() {
